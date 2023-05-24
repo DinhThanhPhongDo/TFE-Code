@@ -135,14 +135,8 @@ def classify_transf(n1,n2,c1,c2):
         return 0
     else:
         return 2
-    # if  d > 0.05 :
-    #     return 1
-    # elif a < 0.998:
-    #     return 2
-    # else:
-    #     return 0
 
-def viz(matches,xyz1,xyz2):
+def viz(matches,xyz1,xyz2,display=False):
     color1 = np.array([[255,128,0],
              [102,204,0],
              [0,204,204],
@@ -177,12 +171,14 @@ def viz(matches,xyz1,xyz2):
     pc2.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=0.5, max_nn=30))
     n2s        = np.asarray(pc2.normals)
 
+    pred_label = np.zeros((len(xyz2)))
+
     it = 0
     for (plane1,plane2,c1,c2, tr) in matches:
         if hasattr(plane2, "__len__"):
-            print('alignment:',np.abs(np.dot(plane1[:3],plane2[:3])))
-            print('distance:',np.linalg.norm(c1-c2))
-            print('transform:',tr)
+            # print('alignment:',np.abs(np.dot(plane1[:3],plane2[:3])))
+            # print('distance:',np.linalg.norm(c1-c2))
+            # print('transform:',tr)
             thresh_d = 0.1
             thresh_n = 0.8
             # find inliers in pc1
@@ -195,6 +191,7 @@ def viz(matches,xyz1,xyz2):
             col1 += np.outer(inlier_mask1,dict_trans1[tr])
             col2 += np.outer(inlier_mask2,dict_trans2[tr])
 
+            pred_label[inlier_mask2] = tr
             # col1 += np.outer(inlier_mask1,color1[it])
             # col2 += np.outer(inlier_mask2,color2[it])
         else:
@@ -206,8 +203,9 @@ def viz(matches,xyz1,xyz2):
     pc2.colors = o3d.utility.Vector3dVector(col2)
 
 
-    if True :
+    if display:
         o3d.visualization.draw_geometries([pc1,pc2])
+    return pred_label
 
 
 
@@ -221,9 +219,9 @@ def plane_matching_viz():
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
     bad = 0
+    total = 0
     for i,target_file in enumerate(dir):
-        if i<7:
-            continue
+
         print("----- iteration %d -----"%i)
         labels      = target_file.split("_")[-2][0]
         source_file = target_file.split("_")[0]+'_0_0_.npy'
@@ -244,11 +242,15 @@ def plane_matching_viz():
         print('number of target planes: %d'%(len(planes2)))
 
         matches = matchPlanes(planes1,planes2)
-        if True: #matches[0][-1] != labels[0]:
-            print('answer: \n',len(matches))
-            viz(matches,source,target)
-            bad +=1
-    print('wrong answer:',bad)
+        pred_label = viz(matches,source,target,display=False)
+        curr_bad   = np.sum(pred_label!=labels)
+        curr_total = len(labels)
+
+        print('number of false results:%d/%d (%5.2f)'%(curr_bad,curr_total, curr_bad/curr_total*100))
+        bad += curr_bad
+        total+=curr_total
+
+    print('mAcc:',bad/total)
 
 
 
