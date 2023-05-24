@@ -197,7 +197,7 @@ if __name__ =='__main__':
     #     vizualize_sans_flow(model,shift)
     #     # vizualizeflow(model,shift,flow_shift)
 
-    TRAIN_DIR = os.path.join(DATA_DIR,'cls/train')
+    TRAIN_DIR = os.path.join(DATA_DIR,'seg/test')
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
     print(TRAIN_DIR)

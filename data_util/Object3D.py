@@ -30,7 +30,7 @@ class Object3D:
             count = 0
             for i,object3d in enumerate(lst_object):
 
-                transform_id = np.random.choice(np.arange(3))
+                transform_id = 2 #np.random.choice(np.arange(3))
 
                 if transform_id ==0:
                     xyz1 = object3d.get_xyz()
@@ -44,7 +44,7 @@ class Object3D:
                     xyz2 = object3d.get_xyz()
 
                 if transform_id ==2:
-                    angle = np.random.uniform(1,5)
+                    angle = np.random.uniform(1,10)
                     angle *= np.random.choice([-1,1])
                     if allowed_rot == None:
                         axis  = np.random.choice([0,1,2])
