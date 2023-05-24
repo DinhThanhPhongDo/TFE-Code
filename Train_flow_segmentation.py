@@ -217,7 +217,7 @@ def main() :
             if mIoU >= best_iou:
                 best_iou = mIoU
                 #logger.info('Save model...')
-                savepath = str("Pointnet_Pointnet2_pytorch-master\log/flow/semSeg") + '/best_model.pth'
+                savepath = str("pretrained_model/pointnet_seg") + '/current_model.pth'
                 #log_string('Saving at %s' % savepath)
                 state = {
                     'epoch': epoch,
