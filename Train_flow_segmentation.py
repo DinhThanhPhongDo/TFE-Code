@@ -10,7 +10,7 @@ import time
 from dataloaders.SegDataLoader import SegDataLoader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, os.pardir))
+ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
 DATA_DIR = os.path.join(ROOT_DIR,'data/seg/')
 
 classes = ['base', 'translation', 'rotation']
@@ -26,13 +26,13 @@ def main() :
 
     NUM_CLASSES = 3
     NUM_POINT = 4096
-    BATCH_SIZE = 16
+    BATCH_SIZE = 8
     train_dataset = SegDataLoader(data_root=DATA_DIR+"train",num_point = NUM_POINT, block_size=6)
     test_dataset = SegDataLoader(data_root=DATA_DIR+"test",num_point = NUM_POINT, block_size=6)
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=12,
+    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=1,
                                                  pin_memory=True, drop_last=True)
     weights = torch.Tensor(train_dataset.labelweights).cuda()
     sys.path.append(os.path.join(BASE_DIR, 'models'))
@@ -60,7 +60,7 @@ def main() :
 
     best_iou = 0
     if True:
-        checkpoint = torch.load(os.path.join(BASE_DIR, 'log/flow/semSeg/acc88.pth'))
+        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/acc88.pth'))
         start_epoch = checkpoint['epoch']
         start_epoch = 0
         if 'class_avg_iou' in checkpoint.keys() :
@@ -142,7 +142,7 @@ def main() :
 
         if epoch % 5 == 0:
             print('Save model...')
-            savepath = str("Pointnet_Pointnet2_pytorch-master\log/flow/semSeg/") + 'backup_model.pth'
+            savepath = str("pretrained_model/pointnet_seg/") + 'backup_model.pth'
             #log_string('Saving at %s' % savepath)
             state = {
                 'epoch': epoch,
