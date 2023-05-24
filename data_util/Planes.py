@@ -72,18 +72,20 @@ class Planes:
                       [0,0,0,1   ]])
         self.T = np.dot(T,self.T)
     
-    def rotate(self,axis,angle):
+    def rotate(self,axis,angle,origin=False):
         """
         Rotate a rectange around its center of gravity in OX (axis=0), OY (axis=1), OZ (axis=2). angle in degree
+        if origin=True, then rotate around the origin (0,0,0). Otherwise, rotate around the centroid
         """
         #translate to the origin
         t = self.T[[0,1,2],3]
         centroid = np.mean(self.xyz,axis=0)
-        self.translate(-centroid)
+        if not origin:
+            self.translate(-centroid)
 
         #rotation
-        s = np.sin(angle*(np.pi/180))
-        c = np.cos(angle*(np.pi/180))
+        s = np.sin(angle*(np.pi/180),dtype=np.float64)
+        c = np.cos(angle*(np.pi/180),dtype=np.float64)
         if axis==0:
             Rx = np.array([[ 1, 0, 0, 0],
                            [ 0, c,-s, 0],
@@ -110,7 +112,8 @@ class Planes:
 
 
         #translate as at the begining
-        self.translate(+centroid)
+        if not origin:
+            self.translate(+centroid)
 
     def copy(self):
         tmp_p1,tmp_p2,tmp_p3,tmp_density,tmp_T = self.p1,self.p2,self.p3,self.density,self.T
@@ -151,7 +154,7 @@ class Triangle:
             #generate pcd centered in (0,0,0)
             self.xyz = np.outer(lambdas[0],self.p1) + np.outer(lambdas[1],self.p2)+ (np.outer(lambdas[2],self.p3))
             #apply transform T to the centered pcd
-            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T).T + self.T[0:3,3]
+            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T,dtype=np.float64).T + self.T[0:3,3]
 
         else:
             # a rectangle (p1,p2,p3) center of gravity is not always (0,0,0). Thus, we consider that 
@@ -168,12 +171,12 @@ class Triangle:
             self.T = np.array([[1,0,0,centroid[0]],
                                [0,1,0,centroid[1]],
                                [0,0,1,centroid[2]],
-                               [0,0,0,1   ]])
+                               [0,0,0,1   ]],dtype=np.float64)
             # i generate a pcd centered and then apply the transformation to translate and finally obtain
             # the rectange (p1,p2,p3).
             # this part can be simplified
             self.xyz = np.outer(lambdas[0],p1) + np.outer(lambdas[1],p2)+ (np.outer(lambdas[2],p3))-centroid     
-            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T).T + self.T[0:3,3]
+            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T,dtype=np.float64).T + self.T[0:3,3]
 
     def translate(self,t):
         """
@@ -183,17 +186,18 @@ class Triangle:
         T = np.array([[1,0,0,t[0]],
                       [0,1,0,t[1]],
                       [0,0,1,t[2]],
-                      [0,0,0,1   ]])
-        self.T = np.dot(T,self.T)
+                      [0,0,0,1   ]],dtype=np.float64)
+        self.T = np.dot(T,self.T,dtype = np.float64)
     
-    def rotate(self,axis,angle):
+    def rotate(self,axis,angle,origin=False):
         """
         Rotate a rectange around its center of gravity in OX (axis=0), OY (axis=1), OZ (axis=2). angle in degree
         """
         #translate to the origin
         t = self.T[[0,1,2],3]
         centroid = np.mean(self.xyz,axis=0)
-        self.translate(-centroid)
+        if not origin:
+            self.translate(-centroid)
 
         #rotation
         s = np.sin(angle*(np.pi/180))
@@ -202,29 +206,30 @@ class Triangle:
             Rx = np.array([[ 1, 0, 0, 0],
                            [ 0, c,-s, 0],
                            [ 0, s, c, 0],
-                           [ 0, 0, 0, 1]])
-            self.xyz = np.dot(Rx[0:3,0:3],self.xyz.T).T
-            self.T   = np.dot(Rx,self.T)
+                           [ 0, 0, 0, 1]],dtype=np.float64)
+            self.xyz = np.dot(Rx[0:3,0:3],self.xyz.T,dtype=np.float64).T
+            self.T   = np.dot(Rx,self.T,dtype=np.float64)
         if axis==1:
             Ry = np.array([[ c, 0, s, 0],
                            [ 0, 1, 0, 0],
                            [-s, 0, c, 0],
-                           [ 0, 0, 0, 1]])
+                           [ 0, 0, 0, 1]],dtype=np.float64)
             self.xyz = np.dot(Ry[0:3,0:3],self.xyz.T).T
-            self.T   = np.dot(Ry, self.T)
+            self.T   = np.dot(Ry, self.T,dtype=np.float64)
         if axis==2:
             Rz = np.array([[ c,-s, 0, 0],
                            [ s, c, 0, 0],
                            [ 0, 0, 1, 0],
-                           [ 0, 0, 0, 1]])
+                           [ 0, 0, 0, 1]],dtype=np.float64)
             self.xyz = np.dot(Rz[0:3,0:3],self.xyz.T).T
-            self.T   = np.dot(Rz, self.T)
+            self.T   = np.dot(Rz, self.T,dtype=np.float64)
 
 
 
 
         #translate as at the begining
-        self.translate(+centroid)
+        if not origin:
+            self.translate(+centroid)
         return
 
     
