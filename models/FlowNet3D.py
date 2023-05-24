@@ -8,7 +8,7 @@ import torch.nn.functional as F
 path = os.path.abspath(os.path.dirname(__file__))
 if not path in sys.path:
     sys.path.append(path)
-from util import PointNetSetAbstraction,PointNetFeaturePropogation,FlowEmbedding,PointNetSetUpConv
+from FlowNet3D_util import PointNetSetAbstraction,PointNetFeaturePropogation,FlowEmbedding,PointNetSetUpConv
 
 
 
