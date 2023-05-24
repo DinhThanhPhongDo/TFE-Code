@@ -41,7 +41,7 @@ def single_plane(L,l,nTransform = 10,planeName='Plane0',partition='test'):
     plane = Object3D([plane1],transform=False)
 
     
-    plane.translate(t)
+    # plane.translate(t)
     #obj.rotate(axis,angle) # do not work!
 
     generate_dataset(plane,nTransform,planeName,data_dir=CLS_DATA_DIR,partition=partition,allowed_rot=[[0,1]])
@@ -83,18 +83,18 @@ def room(L,l,h,h2,nTransform = 10,planeName='room0',partition='test'):
     generate_dataset(maison,nTransform,planeName,SEG_DATA_DIR, partition,allowed_rot=rot)
 
 if __name__ == '__main__':
-    # n_planes = 6
-    # for i in range(n_planes):
-    #      L = np.random.uniform(4,10)
-    #      l = np.random.uniform(2,6)
-    #      name = 'Plane'+str(i)
-    #      single_plane(L,l,nTransform=1,planeName=name,partition='test')
+    n_planes = 4
+    for i in range(n_planes):
+         L = np.random.uniform(4,10)
+         l = np.random.uniform(2,6)
+         name = 'Plane'+str(i)
+         single_plane(L,l,nTransform=6,planeName=name,partition='train')
     
-    n_rooms = 4
-    for i in range(n_rooms):
-        L = np.random.uniform(4,10)
-        l = np.random.uniform(2,6)
-        h1 = np.random.uniform(2,5)
-        h2=None
-        name = 'room'+str(i)
-        room(L,l,h1,h2,nTransform=4,planeName=name,partition='test')
+    # n_rooms = 4
+    # for i in range(n_rooms):
+    #     L = np.random.uniform(4,10)
+    #     l = np.random.uniform(2,6)
+    #     h1 = np.random.uniform(2,5)
+    #     h2=None
+    #     name = 'room'+str(i)
+    #     room(L,l,h1,h2,nTransform=4,planeName=name,partition='test')

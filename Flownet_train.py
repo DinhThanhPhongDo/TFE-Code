@@ -12,7 +12,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 
-from dataloaders.myFlowDataloader import Object3DDataset
+from dataloaders.FlowNetDataloader import Object3DDataset
 from models.FlowNet3D import FlowNet3D
 
 # from tensorboardX import SummaryWriter
