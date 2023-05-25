@@ -2,7 +2,7 @@ import numpy as np
 from data_util.Vizualize import vizualize
 
 class Planes:
-    def __init__(self,p1,p2,p3,density,T=None,hole=None):
+    def __init__(self,p1,p2,p3,density,T=None):
         """
         Generate a rectangular point cloud.
         parameters
@@ -19,16 +19,6 @@ class Planes:
         area    = np.linalg.norm(p1-p2) * np.linalg.norm(p1-p3)
         n_pts   = int(area*density)
         lambda_x,lambda_y = np.random.uniform(low=0,high=1,size=(2,n_pts)) # \in [0,1]
-        if hole :
-            # rectangle hole
-            if type(hole[1])==list:
-                idx_tokeep = np.where((lambda_x<hole[0][0]) | (lambda_x>hole[0][1])|(lambda_y<hole[1][0]) | (lambda_y>hole[1][1]))
-            # ellipsoid hole
-            else :
-                radius = hole[1]
-                idx_tokeep = np.where(((lambda_x-hole[0][0])**2 + (lambda_y-hole[0][1])**2) >= radius**2)
-            lambda_x = lambda_x[idx_tokeep]
-            lambda_y = lambda_y[idx_tokeep]
 
         if isinstance(T, (np.ndarray, np.generic) ): # T != None
 
@@ -118,13 +108,13 @@ class Planes:
     def copy(self):
         tmp_p1,tmp_p2,tmp_p3,tmp_density,tmp_T = self.p1,self.p2,self.p3,self.density,self.T
         return Planes(tmp_p1,tmp_p2,tmp_p3,tmp_density,tmp_T)
+    
     def get_xyz(self):
         return np.copy(self.xyz)
-    def hole(self, hole):
-        #hole = [a,b] where a
-        hole_plane = Planes(self.p1,self.p2,self.p3,self.density,self.T,hole)
-        self.p1,self.p2,self.p3 = hole_plane.p1,hole_plane.p2,hole_plane.p3
-        self.xyz,self.T = hole_plane.xyz,hole_plane.T
+    
+    def add_noise(self,mean=0,std=0.03):
+        noise = np.random.normal(mean,std,size=self.xyz.shape)
+        self.xyz = self.xyz + noise
 
 class Triangle:
     def __init__(self,p1,p2,p3,density,T=None):

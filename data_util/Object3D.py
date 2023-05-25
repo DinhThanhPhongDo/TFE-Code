@@ -11,7 +11,7 @@ TRAIN_DIR = os.path.join(DATA_DIR,'train')
 TEST_DIR  = os.path.join(DATA_DIR,'test')
 
 class Object3D:
-    def __init__(self,lst_object, transform=False, allowed_rot = None):
+    def __init__(self,lst_object, transform=False, allowed_rot = None, add_noise = False):
         n_pts = 0
         for object3d in lst_object:
             n_pts += len(object3d.xyz)
@@ -34,13 +34,18 @@ class Object3D:
 
                 if transform_id ==0:
                     xyz1 = object3d.get_xyz()
+                    if add_noise:
+                        xyz2 = object3d.add_noise()
                     xyz2 = object3d.get_xyz()
+
 
                 if transform_id ==1:
                     t  = np.random.uniform(0.05,0.15,size=(3,))
                     t *= np.random.choice([-1,1])
                     xyz1 = object3d.get_xyz()
                     object3d.translate(t)
+                    if add_noise:
+                        xyz2 = object3d.add_noise()
                     xyz2 = object3d.get_xyz()
 
                 if transform_id ==2:
@@ -52,6 +57,8 @@ class Object3D:
                         axis  = np.random.choice(allowed_rot[i])
                     xyz1 = object3d.get_xyz()
                     object3d.rotate(axis,angle)
+                    if add_noise:
+                        xyz2 = object3d.add_noise()
                     xyz2 = object3d.get_xyz()
                     
 
@@ -64,12 +71,12 @@ class Object3D:
         xyzfl = np.concatenate((self.xyz,self.flow,self.label),axis=1)
         np.save(filename,xyzfl)
     
-    def copy(self,transform,allowed_rot=None):
+    def copy(self,transform,allowed_rot=None,add_noise=False):
         tmp_lst_object = []
         for object in self.lst_object:
             tmp_lst_object.append(object.copy())
 
-        return Object3D(tmp_lst_object,transform,allowed_rot)
+        return Object3D(tmp_lst_object,transform,allowed_rot,add_noise)
 
     def translate(self, t) :
         count = 0
@@ -90,6 +97,17 @@ class Object3D:
             self.flow[count: count+len(object.xyz), : ] += xyz1-xyz2
             self.xyz[count: count+len(object.xyz), : ] = object.xyz
             count += len(object.xyz)
+    def add_noise(self,mean=0,std=0.03):
+        count = 0
+        for object in self.lst_object:
+            xyz1 = self.xyz[count: count+len(object.xyz), : ]
+            object.add_noise(mean,std,origin=True)
+            xyz2 = self.xyz[count: count+len(object.xyz), : ]
+            self.flow[count: count+len(object.xyz), : ] += xyz1-xyz2
+            self.xyz[count: count+len(object.xyz), : ]   = object.xyz
+            count += len(object.xyz)
+
+
 
 
 

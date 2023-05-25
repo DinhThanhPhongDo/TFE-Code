@@ -2,6 +2,7 @@ import os
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
+from time import time
 
 def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
     """
@@ -9,11 +10,12 @@ def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
     pts_n  = np.array(N,3)
     """
     n_pts    = len(pts)
-    epoch    = 1000#int(np.log(1-0.95)/np.log(1-0.05**3))
+    epoch    = 1500#int(np.log(1-0.95)/np.log(1-0.05**3))
 
     idx_pts  = np.arange(0,n_pts,1)
     best_inlier_mask  = None
     best_n_inliers = 0
+    best_mse = np.inf
 
     iterator = range(epoch)
     if tqdm_bool:
@@ -39,7 +41,17 @@ def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
         n_inliers = np.sum(inlier_mask)
 
         # Step 4: keep in memory the best plane.
+        mse = np.sqrt(np.sum(np.power(inlier_mask*dist_pt,2)))
+    
         if n_inliers> best_n_inliers:
+            
+            best_mse          = mse
+            best_plane        = plane
+            best_inlier_mask  = inlier_mask
+            best_n_inliers    = n_inliers
+            best_centroid     = np.mean(pts[inlier_mask])
+        elif n_inliers >= best_n_inliers and mse< best_mse:
+            best_mse          = mse
             best_plane        = plane
             best_inlier_mask  = inlier_mask
             best_n_inliers    = n_inliers
@@ -73,7 +85,9 @@ def get_all_planes(xyz, voxel_size = 0.1, n_inliers = 500, n_plane=1, tqdm_bool=
         pts_n        = np.asarray(pcd_plane.normals)
         pts          = np.asarray(pcd_plane.points)
         plane,inliers_idx, centroid = ransac(pts,pts_n, thresh_d=thresh_d,thresh_n=thresh_n,epoch=20, tqdm_bool=tqdm_bool)
-
+        if display:
+            print('remaining num points',len(pts))
+            print('guessed num points',len(inliers_idx))
         if len(inliers_idx) < n_inliers :
             break
 
@@ -93,7 +107,7 @@ def get_all_planes(xyz, voxel_size = 0.1, n_inliers = 500, n_plane=1, tqdm_bool=
         inliers_lst.append(inlier_cloud)
 
         if display:
-            print(len(inliers_idx))
+            print('appended',len(inliers_idx))
             o3d.visualization.draw_geometries(inliers_lst+[outlier_cloud])
 
 
@@ -204,7 +218,7 @@ def viz(matches,xyz1,xyz2,display=False):
 
 
     if display:
-        o3d.visualization.draw_geometries([pc1,pc2])
+        o3d.visualization.draw_geometries([pc2])
     return pred_label
 
 
@@ -214,43 +228,50 @@ def plane_matching_viz():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     ROOT_DIR = BASE_DIR
     DATA_DIR = os.path.join(ROOT_DIR,'data')
-    TRAIN_DIR = os.path.join(DATA_DIR,'seg/train')
+    TRAIN_DIR = os.path.join(DATA_DIR,'seg_noisy/train')
 
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
     bad = 0
+    bad_cls = 0
     total = 0
+    tot_t = 0
     for i,target_file in enumerate(dir):
+        
 
-        print("----- iteration %d -----"%i)
+        print("--------- iteration %d/%d --------"%(i,len(dir)))
         labels      = target_file.split("_")[-2][0]
         source_file = target_file.split("_")[0]+'_0_0_.npy'
         
 
         source = np.load(os.path.join(TRAIN_DIR,source_file))[:,:3]
         target = np.load(os.path.join(TRAIN_DIR,target_file))[:,:3]
-        flow   = np.load(os.path.join(TRAIN_DIR,target_file))[:,3:6]
         labels = np.load(os.path.join(TRAIN_DIR,target_file))[:,-1]
 
-        print('label=',labels[0])
-
+        t0 = time()
         print('source:',source_file)
-        planes1 = get_all_planes(source,tqdm_bool=True)
+        planes1 = get_all_planes(source,tqdm_bool=False)
         print('target:',target_file)
-        planes2 = get_all_planes(target,tqdm_bool=True)
-        print('number of source planes: %d'%(len(planes1)))
-        print('number of target planes: %d'%(len(planes2)))
-
+        planes2 = get_all_planes(target,tqdm_bool=False,display=False)
+        
+        
         matches = matchPlanes(planes1,planes2)
         pred_label = viz(matches,source,target,display=False)
+
+        t1 = time()
+        tot_t += t1-t0
         curr_bad   = np.sum(pred_label!=labels)
         curr_total = len(labels)
 
         print('number of false results:%d/%d (%5.2f)'%(curr_bad,curr_total, curr_bad/curr_total*100))
+        print('time= %5.2f'%(t1-t0))
         bad += curr_bad
         total+=curr_total
+        if pred_label[0] != labels[0]:
+            bad_cls += 1
 
-    print('mAcc:',bad/total)
+    print('mAcc:',1-bad/total)
+    print('Bad classification: %d/%d (%5.2f)'%(bad_cls,len(dir),bad_cls/len(dir)*100))
 
 
 
@@ -261,6 +282,7 @@ def plane_matching_viz():
 
 if __name__ =='__main__':
     plane_matching_viz()
+
         
 
 
