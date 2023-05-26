@@ -61,7 +61,7 @@ class PlaneDataLoader(Dataset):
 
     def _get_item(self, index):
         point_set = np.load(self.datapath[index][1])[:,:6].astype(np.float32)
-        label = np.array([self.datapath[index][0]]).astype(np.int32)
+        label     = np.array([self.datapath[index][0]]).astype(np.int32)
         point_set = farthest_point_sample(point_set, 2048)
         point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
         

@@ -80,14 +80,14 @@ def main() :
     best_class_acc = 0.0
 
     '''TRANING'''
-    # print('try loading pretrained model...')
-    # try:
-    #     checkpoint = torch.load(os.path.join(BASE_DIR, 'log/flow/best_model.pth'))
-    #     classifier.load_state_dict(checkpoint['model_state_dict'])
-    #     print('pretrained model loaded!')
-    # except Exception:
-    #     print('could not load pretrained model... start from scratch')
-    #logger.info('Start training...')
+    print('try loading pretrained model...')
+    try:
+        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_cls/best_cls_no_noise.pth'))
+        classifier.load_state_dict(checkpoint['model_state_dict'])
+        print('pretrained model loaded!')
+    except Exception:
+        print('could not load pretrained model... start from scratch')
+    print('Start training...')
     start_epoch = 0
     for epoch in range(start_epoch, 20):
         #log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 200))
@@ -146,6 +146,7 @@ def main() :
                     'model_state_dict': classifier.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                 }
+                print('saving...')
                 torch.save(state, savepath)
             global_epoch += 1
 

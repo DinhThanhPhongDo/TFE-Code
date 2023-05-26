@@ -40,7 +40,7 @@ class Object3D:
 
 
                 if transform_id ==1:
-                    t  = np.random.uniform(0.05,0.15,size=(3,))
+                    t  = np.random.uniform(0.5,0.15,size=(3,)) #0.05 up to 0.15
                     t *= np.random.choice([-1,1])
                     xyz1 = object3d.get_xyz()
                     object3d.translate(t)
@@ -49,7 +49,7 @@ class Object3D:
                     xyz2 = object3d.get_xyz()
 
                 if transform_id ==2:
-                    angle = np.random.uniform(1,10)
+                    angle = np.random.uniform(1,10) # 1 up to  10
                     angle *= np.random.choice([-1,1])
                     if allowed_rot == None:
                         axis  = np.random.choice([0,1,2])

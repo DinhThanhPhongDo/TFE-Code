@@ -4,13 +4,15 @@ import open3d as o3d
 from tqdm import tqdm
 from time import time
 
+from sklearn.metrics import accuracy_score, precision_score, recall_score,f1_score, confusion_matrix
+
 def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
     """
     points = np.array(N,3)
     pts_n  = np.array(N,3)
     """
     n_pts    = len(pts)
-    epoch    = 1500#int(np.log(1-0.95)/np.log(1-0.05**3))
+    epoch    = 500#int(np.log(1-0.95)/np.log(1-0.05**3))
 
     idx_pts  = np.arange(0,n_pts,1)
     best_inlier_mask  = None
@@ -128,7 +130,7 @@ def matchPlanes(planes1,planes2) :
 
             n2 = plane2[:3]
 
-            if np.linalg.norm(c1-c2)< 1:
+            if np.linalg.norm(c1-c2)< 0.5:
                 if np.abs(np.dot(n1,n2))> best_align:
 
                     tr = classify_transf(n1,n2,c1,c2)
@@ -164,12 +166,12 @@ def viz(matches,xyz1,xyz2,display=False):
                 [51,153,255],
                 [255,0,255],
                 [153,0,76],
-                [255,255,153]])/510
+                [255,255,153]])/610
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
-    dict_trans1 = {0: np.array([0.7,0.7,0.7]),
+    dict_trans1 = {0: np.array([0.8,0.8,0.8]),
                   1: np.array([0,1,0]),
                   2: np.array([1,0,0])}
-    dict_trans2 = {0: np.array([0.,0.,0.5]),
+    dict_trans2 = {0: np.array([0.3,0.3,0.3]),
                   1: np.array([0,0.4,0]),
                   2: np.array([0.4,0,0])}
     pc1 = o3d.geometry.PointCloud()
@@ -218,7 +220,7 @@ def viz(matches,xyz1,xyz2,display=False):
 
 
     if display:
-        o3d.visualization.draw_geometries([pc2])
+        o3d.visualization.draw_geometries([pc1,pc2])
     return pred_label
 
 
@@ -228,7 +230,7 @@ def plane_matching_viz():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     ROOT_DIR = BASE_DIR
     DATA_DIR = os.path.join(ROOT_DIR,'data')
-    TRAIN_DIR = os.path.join(DATA_DIR,'seg_noisy/train')
+    TRAIN_DIR = os.path.join(DATA_DIR,'cls/train')
 
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
@@ -236,6 +238,10 @@ def plane_matching_viz():
     bad_cls = 0
     total = 0
     tot_t = 0
+
+
+    targets = []
+    preds   = []
     for i,target_file in enumerate(dir):
         
 
@@ -269,9 +275,28 @@ def plane_matching_viz():
         total+=curr_total
         if pred_label[0] != labels[0]:
             bad_cls += 1
+        
 
-    print('mAcc:',1-bad/total)
-    print('Bad classification: %d/%d (%5.2f)'%(bad_cls,len(dir),bad_cls/len(dir)*100))
+        targets.append(int(labels[0]))
+        preds.append(int(pred_label[0]))
+
+    # print('mAcc:',1-bad/total)
+    # print('Bad classification: %d/%d (%5.2f)'%(bad_cls,len(dir),bad_cls/len(dir)*100))
+
+
+    matrix = confusion_matrix(targets, preds)
+    acc    = accuracy_score(targets,preds)
+    prec   = precision_score(targets,preds,average=None)
+    rec    = recall_score(targets,preds,average=None)
+    f1     = f1_score(targets,preds,average=None)
+    class_acc = matrix.diagonal()/matrix.sum(axis=1)
+
+    print('avg acc %f     avg prec %f    avg recall %f    avg f1 %f'%(acc, precision_score(targets,preds,average='weighted'),recall_score(targets,preds,average='weighted'),f1_score(targets,preds,average='weighted')))
+    print('accuracy',class_acc)
+    print('precision:', prec)
+    print('recall',rec)
+    print('f1-score:',f1)
+    print(matrix)
 
 
 

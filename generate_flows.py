@@ -3,7 +3,7 @@ import os
 import torch
 import torch.nn as nn
 from data_util.myFlowDataloader import Object3DDataset
-from models.Flownet import FlowNet3D
+from models import FlowNet3D
 import numpy as np
 from torch.utils.data import DataLoader
 from tqdm import tqdm    
@@ -18,7 +18,7 @@ def weights_init(m):
     
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
-DATAFLOW_DIR = os.path.join(ROOT_DIR,'data\\dataflow')
+DATAFLOW_DIR = os.path.join(ROOT_DIR,'data/cls/-')
 
 def main():
 

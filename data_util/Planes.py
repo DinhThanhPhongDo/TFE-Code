@@ -1,5 +1,5 @@
 import numpy as np
-from data_util.Vizualize import vizualize
+# from Vizualize import vizualize
 
 class Planes:
     def __init__(self,p1,p2,p3,density,T=None):
@@ -144,7 +144,7 @@ class Triangle:
             #generate pcd centered in (0,0,0)
             self.xyz = np.outer(lambdas[0],self.p1) + np.outer(lambdas[1],self.p2)+ (np.outer(lambdas[2],self.p3))
             #apply transform T to the centered pcd
-            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T,dtype=np.float64).T + self.T[0:3,3]
+            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T).T + self.T[0:3,3]
 
         else:
             # a rectangle (p1,p2,p3) center of gravity is not always (0,0,0). Thus, we consider that 
@@ -166,7 +166,7 @@ class Triangle:
             # the rectange (p1,p2,p3).
             # this part can be simplified
             self.xyz = np.outer(lambdas[0],p1) + np.outer(lambdas[1],p2)+ (np.outer(lambdas[2],p3))-centroid     
-            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T,dtype=np.float64).T + self.T[0:3,3]
+            self.xyz = np.dot(self.T[0:3,0:3],self.xyz.T).T + self.T[0:3,3]
 
     def translate(self,t):
         """
@@ -177,7 +177,7 @@ class Triangle:
                       [0,1,0,t[1]],
                       [0,0,1,t[2]],
                       [0,0,0,1   ]],dtype=np.float64)
-        self.T = np.dot(T,self.T,dtype = np.float64)
+        self.T = np.dot(T,self.T)
     
     def rotate(self,axis,angle,origin=False):
         """
@@ -197,22 +197,22 @@ class Triangle:
                            [ 0, c,-s, 0],
                            [ 0, s, c, 0],
                            [ 0, 0, 0, 1]],dtype=np.float64)
-            self.xyz = np.dot(Rx[0:3,0:3],self.xyz.T,dtype=np.float64).T
-            self.T   = np.dot(Rx,self.T,dtype=np.float64)
+            self.xyz = np.dot(Rx[0:3,0:3],self.xyz.T).T
+            self.T   = np.dot(Rx,self.T)
         if axis==1:
             Ry = np.array([[ c, 0, s, 0],
                            [ 0, 1, 0, 0],
                            [-s, 0, c, 0],
                            [ 0, 0, 0, 1]],dtype=np.float64)
             self.xyz = np.dot(Ry[0:3,0:3],self.xyz.T).T
-            self.T   = np.dot(Ry, self.T,dtype=np.float64)
+            self.T   = np.dot(Ry, self.T)
         if axis==2:
             Rz = np.array([[ c,-s, 0, 0],
                            [ s, c, 0, 0],
                            [ 0, 0, 1, 0],
                            [ 0, 0, 0, 1]],dtype=np.float64)
             self.xyz = np.dot(Rz[0:3,0:3],self.xyz.T).T
-            self.T   = np.dot(Rz, self.T,dtype=np.float64)
+            self.T   = np.dot(Rz, self.T)
 
 
 
@@ -313,7 +313,7 @@ def test2(L,l,h,h2,transform=False):
 
     if transform==True:
         plane1.rotate(axis=1,angle=10)
-        plane2.hole([[1/2,1/2],1/3])
+        # plane2.hole([[1/2,1/2],1/3])
         #plane2.hole([[3/4,1],[1/2,1]])
         plane2.translate(np.array([-.3,0.2,0.1]))
         trian1.rotate(axis=2,angle=10)
@@ -328,8 +328,7 @@ def test2(L,l,h,h2,transform=False):
 if __name__ =='__main__':
     # test1()
     # test2(L=3,l=2,h=1,h2=2,transform=False)
-    # test2(L=3,l=2,h=1,h2=2,transform=True)
+    test2(L=3,l=2,h=1,h2=2,transform=False)
     x = np.array([0,0,0])
     p1 = np.array([1,0,0])
-    rectangle = Planes()
 

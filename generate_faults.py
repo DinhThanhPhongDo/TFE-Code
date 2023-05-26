@@ -1,12 +1,11 @@
 from data_util.Object3D import *
-from data_util.Vizualize import vizualize
 import os
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
-CLS_DATA_DIR = os.path.join(ROOT_DIR,'data\cls_noisy')
-SEG_DATA_DIR = os.path.join(ROOT_DIR,'data\seg_noisy')
+CLS_DATA_DIR = os.path.join(ROOT_DIR,'data\cls')
+SEG_DATA_DIR = os.path.join(ROOT_DIR,'data\seg')
 
 
 def generate_dataset(obj3d,n_transform,filename,data_dir,partition='train',allowed_rot=None,add_noise=False):
@@ -85,18 +84,18 @@ def room(L,l,h,h2,nTransform = 10,planeName='room0',partition='test',add_noise=F
 
 if __name__ == '__main__':
     
-    # n_planes = 4
-    # for i in range(n_planes):
-    #      L = np.random.uniform(4,10)
-    #      l = np.random.uniform(2,6)
-    #      name = 'Plane'+str(i)
-    #      single_plane(L,l,nTransform=6,planeName=name,partition='train',add_noise=True)
+    n_planes = 6
+    for i in range(n_planes):
+         L = np.random.uniform(4,10)
+         l = np.random.uniform(2,6)
+         name = 'Plane'+str(i)
+         single_plane(L,l,nTransform=4,planeName=name,partition='test',add_noise=True)
     
-    n_rooms = 8
-    for i in range(n_rooms):
-        L = np.random.uniform(4,10)
-        l = np.random.uniform(2,6)
-        h1 = np.random.uniform(2,5)
-        h2=None
-        name = 'room'+str(i)
-        room(L,l,h1,h2,nTransform=4,planeName=name,partition='train',add_noise=True)
+    # n_rooms = 8
+    # for i in range(n_rooms):
+    #     L = np.random.uniform(4,10)
+    #     l = np.random.uniform(2,6)
+    #     h1 = np.random.uniform(2,5)
+    #     h2=None
+    #     name = 'room'+str(i)
+    #     room(L,l,h1,h2,nTransform=4,planeName=name,partition='train',add_noise=True)
