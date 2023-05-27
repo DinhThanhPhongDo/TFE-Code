@@ -40,12 +40,16 @@ def vizualize(model,sample,flow):
     pcd_shift.paint_uniform_color([0, 1, 0])
 
     pcd_flow = o3d.geometry.PointCloud()
-    pcd_flow.points = o3d.utility.Vector3dVector(model+flow)
+    pcd_flow.points = o3d.utility.Vector3dVector(sample+flow)
     pcd_flow.paint_uniform_color([1, 0, 0])
 
     print(len(pcd_model.points))
-
     o3d.visualization.draw_geometries([pcd_model,pcd_shift,pcd_flow])
+    # o3d.visualization.draw_geometries([pcd_model,pcd_shift,pcd_flow],
+    #                                   zoom=0.4559,
+    #                                   front=[0.6452, -0.3036, -0.7011],
+    #                                   lookat=[1.9892, 2.0208, 1.8945],
+    #                                   up=[-0.2779, -0.9482, 0.1556])
 
 def vizualize2(sample,flow):
     """
@@ -201,7 +205,7 @@ if __name__ =='__main__':
     #     vizualize_sans_flow(model,shift)
     #     # vizualizeflow(model,shift,flow_shift)
 
-    TRAIN_DIR = os.path.join(DATA_DIR,'cls/train')
+    TRAIN_DIR = os.path.join(DATA_DIR,'cls/test')
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
     print(TRAIN_DIR)
@@ -218,11 +222,11 @@ if __name__ =='__main__':
         
         
         # vizualizeflow2(shift,flow_shift)
-        vizualize_sans_flow(model,shift)
+        # vizualize_sans_flow(model,shift)
         # vizualizeflow(model,shift,flow_shift)
         # vizualize2(shift,flow_shift)
         # vizualizeLabels(shift,np.load(os.path.join(TRAIN_DIR,file))[:,6])
-        # vizualize(model,shift,flow_shift)
+        vizualize(model,shift,flow_shift)
         
     
     

@@ -20,7 +20,8 @@ def generate_dataset(obj3d,n_transform,filename,data_dir,partition='train',allow
 
         for i in np.arange(1,n_transform+1,1):
 
-            o2 = obj3d.copy(transform=True,allowed_rot=allowed_rot,add_noise=add_noise)
+            o2 = obj3d.copy(allowed_rot=allowed_rot,is_noisy=add_noise)
+            o2.transform()
             o2.save(os.path.join(dir,filename+'_'+str(i)+'_'+str(int(o2.label[0,0]))+'_'))
 
 
@@ -31,18 +32,15 @@ def single_plane(L,l,nTransform = 10,planeName='Plane0',partition='test',add_noi
     density = 500
 
     plane1 = Planes(p1,p3,p2,density)
+    plane = Object3D([plane1])
+
+
     t = np.random.uniform(-10,10,size=(3,))
     angle = np.random.uniform(-180,+180)
     axis  = np.random.choice([0,1,2])
 
-    plane1.translate(t)
-    plane1.rotate(axis,angle)
-
-    plane = Object3D([plane1],transform=False)
-
-    
-    # plane.translate(t)
-    #obj.rotate(axis,angle) # do not work!
+    plane.translate(t)
+    plane.rotate(axis,angle)
 
     generate_dataset(plane,nTransform,planeName,data_dir=CLS_DATA_DIR,partition=partition,allowed_rot=[[0,1]],add_noise=add_noise)
 
@@ -84,12 +82,12 @@ def room(L,l,h,h2,nTransform = 10,planeName='room0',partition='test',add_noise=F
 
 if __name__ == '__main__':
     
-    n_planes = 6
+    n_planes = 1
     for i in range(n_planes):
          L = np.random.uniform(4,10)
          l = np.random.uniform(2,6)
          name = 'Plane'+str(i)
-         single_plane(L,l,nTransform=4,planeName=name,partition='test',add_noise=True)
+         single_plane(L,l,nTransform=16,planeName=name,partition='test',add_noise=True)
     
     # n_rooms = 8
     # for i in range(n_rooms):
