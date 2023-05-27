@@ -16,7 +16,7 @@ def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
 
     idx_pts  = np.arange(0,n_pts,1)
     best_inlier_mask  = None
-    best_n_inliers = 0
+    best_n_inliers = 3
     best_mse = np.inf
 
     iterator = range(epoch)
@@ -62,7 +62,7 @@ def ransac(pts,pts_n, thresh_d,thresh_n,epoch=1000, tqdm_bool=False) :
     return best_plane,idx_pts[best_inlier_mask],best_centroid
 
                                 
-def get_all_planes(xyz, voxel_size = 0.1, n_inliers = 500, n_plane=1, tqdm_bool=False, thresh_d=0.1,thresh_n=0.8,display=False):
+def planes_detection(xyz, voxel_size = 0.1, n_inliers = 500, n_plane=1, tqdm_bool=False, thresh_d=0.1,thresh_n=0.8,display=False):
     """
         xyz = np.array(N,3)
     """
@@ -118,7 +118,7 @@ def get_all_planes(xyz, voxel_size = 0.1, n_inliers = 500, n_plane=1, tqdm_bool=
     
     return planes
 
-def matchPlanes(planes1,planes2) :
+def plane_matching(planes1,planes2) :
 
     rep = []
 
@@ -133,7 +133,7 @@ def matchPlanes(planes1,planes2) :
             if np.linalg.norm(c1-c2)< 0.5:
                 if np.abs(np.dot(n1,n2))> best_align:
 
-                    tr = classify_transf(n1,n2,c1,c2)
+                    tr = transf_classify(n1,n2,c1,c2)
                     best_match = (plane1,plane2,c1,c2, tr)
                     best_align = np.abs(np.dot(plane1[:3],plane2[:3]))
         if best_align == 0:
@@ -141,7 +141,7 @@ def matchPlanes(planes1,planes2) :
         rep.append(best_match)
     return rep
 
-def classify_transf(n1,n2,c1,c2):  
+def transf_classify(n1,n2,c1,c2):  
     # parameters for the classification case: d <= 0.05 and a < 0.9998
     a = np.abs(np.dot(n1,n2))
     d = np.linalg.norm(c1-c2)
@@ -152,7 +152,7 @@ def classify_transf(n1,n2,c1,c2):
     else:
         return 2
 
-def viz(matches,xyz1,xyz2,display=False):
+def change_detection(matches,xyz1,xyz2,display=False):
     color1 = np.array([[255,128,0],
              [102,204,0],
              [0,204,204],
@@ -224,16 +224,23 @@ def viz(matches,xyz1,xyz2,display=False):
     return pred_label
 
 
+def model(source,target):
 
+    planes1 = planes_detection(source,tqdm_bool=False)
+    planes2 = planes_detection(target,tqdm_bool=False,display=False)
+    matches = plane_matching(planes1,planes2)
+    pred_label = change_detection(matches,source,target,display=False)
 
-def plane_matching_viz():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    ROOT_DIR = BASE_DIR
-    DATA_DIR = os.path.join(ROOT_DIR,'data')
-    TRAIN_DIR = os.path.join(DATA_DIR,'cls/train')
+    return pred_label
+
+def model2(base_dir,root_dir,data_dir,train_dir):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = base_dir
+    data_dir = os.path.join(root_dir,'data')
+    train_dir = os.path.join(data_dir,'cls/train')
 
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
-    dir = os.listdir(TRAIN_DIR)
+    dir = os.listdir(train_dir)
     bad = 0
     bad_cls = 0
     total = 0
@@ -250,19 +257,19 @@ def plane_matching_viz():
         source_file = target_file.split("_")[0]+'_0_0_.npy'
         
 
-        source = np.load(os.path.join(TRAIN_DIR,source_file))[:,:3]
-        target = np.load(os.path.join(TRAIN_DIR,target_file))[:,:3]
-        labels = np.load(os.path.join(TRAIN_DIR,target_file))[:,-1]
+        source = np.load(os.path.join(train_dir,source_file))[:,:3]
+        target = np.load(os.path.join(train_dir,target_file))[:,:3]
+        labels = np.load(os.path.join(train_dir,target_file))[:,-1]
 
         t0 = time()
         print('source:',source_file)
-        planes1 = get_all_planes(source,tqdm_bool=False)
+        planes1 = planes_detection(source,tqdm_bool=False)
         print('target:',target_file)
-        planes2 = get_all_planes(target,tqdm_bool=False,display=False)
+        planes2 = planes_detection(target,tqdm_bool=False,display=False)
         
         
-        matches = matchPlanes(planes1,planes2)
-        pred_label = viz(matches,source,target,display=False)
+        matches = plane_matching(planes1,planes2)
+        pred_label = change_detection(matches,source,target,display=False)
 
         t1 = time()
         tot_t += t1-t0
@@ -306,7 +313,7 @@ def plane_matching_viz():
 
 
 if __name__ =='__main__':
-    plane_matching_viz()
+    model()
 
         
 

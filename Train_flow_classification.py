@@ -14,33 +14,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
 DATA_DIR = os.path.join(ROOT_DIR,'data/cls/')
 
-def test(model, loader, num_class=40):
-    mean_correct = []
-    class_acc = np.zeros((num_class, 3))
-    classifier = model.eval()
-
-    for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
-
-        points, target = points.cuda(), target.cuda()
-
-        points = points.transpose(2, 1)
-        pred, _ = classifier(points)
-        pred_choice = pred.data.max(1)[1]
-
-        for cat in np.unique(target.cpu()):
-            classacc = pred_choice[target == cat].eq(target[target == cat].long().data).cpu().sum()
-            class_acc[cat, 0] += classacc.item() / float(points[target == cat].size()[0])
-            class_acc[cat, 1] += 1
-
-        correct = pred_choice.eq(target.long().data).cpu().sum()
-        mean_correct.append(correct.item() / float(points.size()[0]))
-
-    class_acc[:, 2] = class_acc[:, 0] / class_acc[:, 1]
-    class_acc    = np.mean(class_acc[:, 2])
-    instance_acc = np.mean(mean_correct)
-
-    return instance_acc, class_acc
-def test2(model, loader, num_class=3):
+def test(model, loader):
 
     classifier = model.eval()
     targets = []
@@ -71,6 +45,8 @@ def test2(model, loader, num_class=3):
     print('recall',rec)
     print('f1-score:',f1)
     print(matrix)
+
+    return acc,np.mean(class_acc) # instance_acc, class_acc
 
 def main() : 
     import os
@@ -122,11 +98,12 @@ def main() :
         print('pretrained model loaded!')
     except Exception:
         print('could not load pretrained model... start from scratch')
+    
     print('Start training...')
     start_epoch = 0
 
     for epoch in range(start_epoch, 2):
-        #log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 200))
+
         print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
         mean_correct = []
         classifier = classifier.train()
@@ -159,8 +136,7 @@ def main() :
         print('Train Instance Accuracy: %f' % train_instance_acc)
 
         with torch.no_grad():
-            instance_acc, class_acc = test(classifier.eval(), testDataLoader, num_class=num_class)
-            test2(classifier.eval(), testDataLoader, num_class=num_class)
+            instance_acc, class_acc = test(classifier.eval(), testDataLoader)
 
             if (instance_acc >= best_instance_acc):
                 best_instance_acc = instance_acc

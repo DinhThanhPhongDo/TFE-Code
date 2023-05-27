@@ -41,7 +41,7 @@ class Object3D:
         count = 0
         for i,object3d in enumerate(self.lst_object):
 
-            transform_id = np.random.choice([2])#np.arange(3))
+            transform_id = np.random.choice(np.arange(3))
 
             if transform_id ==0:
                 xyz1 = object3d.get_xyz()
