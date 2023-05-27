@@ -5,9 +5,9 @@ import numpy as np
 path = os.path.abspath(os.path.dirname(__file__))
 if not path in sys.path:
     sys.path.append(path)
+    
 from Planes import *
 from Vizualize import *
-import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, os.pardir))
@@ -41,7 +41,7 @@ class Object3D:
         count = 0
         for i,object3d in enumerate(self.lst_object):
 
-            transform_id = np.random.choice(np.arange(3))
+            transform_id = np.random.choice([2])#np.arange(3))
 
             if transform_id ==0:
                 xyz1 = object3d.get_xyz()
@@ -94,8 +94,11 @@ class Object3D:
             object.rotate(axis,angle,origin=True)
             xyz2 = object.get_xyz()
             self.flow[count: count+len(object.xyz), : ] += xyz1-xyz2
-            self.xyz[count: count+len(object.xyz), : ]   = xyz2
+            self.xyz [count: count+len(object.xyz), : ]  = xyz2
             count += len(xyz1)
+    
+    def reset_flow(self):
+        self.flow = np.zeros(shape = self.flow.shape)
 
     def save(self,filename):
         xyzfl = np.concatenate((self.xyz,self.flow,self.label),axis=1)
@@ -114,7 +117,7 @@ class Object3D:
         count = 0
         for object in self.lst_object:
             xyz1 = object.get_xyz()
-            object.add_noise(mean,std,origin=True)
+            object.add_noise(mean,std)
             xyz2 = object.get_xyz()
             self.flow[count: count+len(object.xyz), : ] += xyz1-xyz2
             self.xyz[count: count+len(object.xyz), : ]   = object.xyz

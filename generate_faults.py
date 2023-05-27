@@ -39,8 +39,11 @@ def single_plane(L,l,nTransform = 10,planeName='Plane0',partition='test',add_noi
     angle = np.random.uniform(-180,+180)
     axis  = np.random.choice([0,1,2])
 
+    
     plane.translate(t)
-    plane.rotate(axis,angle)
+    # If rotation performed, the rotation of the plane is no longer along axis
+    # plane.rotate(axis,angle)
+    plane.reset_flow()
 
     generate_dataset(plane,nTransform,planeName,data_dir=CLS_DATA_DIR,partition=partition,allowed_rot=[[0,1]],add_noise=add_noise)
 
@@ -76,24 +79,26 @@ def room(L,l,h,h2,nTransform = 10,planeName='room0',partition='test',add_noise=F
     axis  = np.random.choice([0,1,2])
 
     maison.translate(t)
-    #maison.rotate(axis,angle)
+    # If rotation performed, the rotation of the plane is no longer along axis
+    # maison.rotate(axis,angle)
+    maison.reset_flow()
 
     generate_dataset(maison,nTransform,planeName,SEG_DATA_DIR, partition,allowed_rot=rot,add_noise=add_noise)
 
 if __name__ == '__main__':
     
-    n_planes = 1
-    for i in range(n_planes):
-         L = np.random.uniform(4,10)
-         l = np.random.uniform(2,6)
-         name = 'Plane'+str(i)
-         single_plane(L,l,nTransform=16,planeName=name,partition='test',add_noise=True)
+    # n_planes = 1
+    # for i in range(n_planes):
+    #      L = np.random.uniform(4,10)
+    #      l = np.random.uniform(2,6)
+    #      name = 'Plane'+str(i)
+    #      single_plane(L,l,nTransform=16,planeName=name,partition='test',add_noise=True)
     
-    # n_rooms = 8
-    # for i in range(n_rooms):
-    #     L = np.random.uniform(4,10)
-    #     l = np.random.uniform(2,6)
-    #     h1 = np.random.uniform(2,5)
-    #     h2=None
-    #     name = 'room'+str(i)
-    #     room(L,l,h1,h2,nTransform=4,planeName=name,partition='train',add_noise=True)
+    n_rooms = 1
+    for i in range(n_rooms):
+        L = np.random.uniform(4,10)
+        l = np.random.uniform(2,6)
+        h1 = np.random.uniform(2,5)
+        h2=None
+        name = 'room'+str(i)
+        room(L,l,h1,h2,nTransform=4,planeName=name,partition='test',add_noise=False)

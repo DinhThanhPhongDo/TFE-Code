@@ -205,7 +205,7 @@ if __name__ =='__main__':
     #     vizualize_sans_flow(model,shift)
     #     # vizualizeflow(model,shift,flow_shift)
 
-    TRAIN_DIR = os.path.join(DATA_DIR,'cls/test')
+    TRAIN_DIR = os.path.join(DATA_DIR,'seg/test')
     dict_trans = {0: 'rien', 1:'translate', 2:'rotate'}
     dir = os.listdir(TRAIN_DIR)
     print(TRAIN_DIR)
@@ -214,6 +214,7 @@ if __name__ =='__main__':
         #     continue
         label = file.split("_")[-2][0]
         model_name = file.split("_")[0]+'_0_0_.npy'
+        print(model_name)
         print(dict_trans[int(label)],"---   ---",file)
 
         model = np.load(os.path.join(TRAIN_DIR,model_name))[:,:3]
