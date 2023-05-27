@@ -101,11 +101,23 @@ def main() :
     
     print('Start training...')
     start_epoch = 0
+    n_epoch = 10
 
-    for epoch in range(start_epoch, 2):
+    class_acc = np.zeros((n_epoch,))
+    accs    = np.zeros((n_epoch,3))
+    precs   = np.zeros((n_epoch,3))
+    prec_avgs = np.zeros((n_epoch,))
+    recs    =  np.zeros((n_epoch,3))
+    rec_avgs = np.zeros((n_epoch,))
+    f1s     = np.zeros((n_epoch,3))
+    f1_avgs = np.zeros((n_epoch,))
+
+    for epoch in range(start_epoch, n_epoch):
 
         print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
         mean_correct = []
+        targets = []
+        preds   = []
         classifier = classifier.train()
 
         scheduler.step()
@@ -127,9 +139,21 @@ def main() :
 
             correct = pred_choice.eq(target.long().data).cpu().sum()
             mean_correct.append(correct.item() / float(points.size()[0]))
+            targets.extend(target.cpu().numpy())
+            preds.extend(pred.data.max(1)[1].cpu().numpy())
             loss.backward()
             optimizer.step()
             global_step += 1
+        
+        matrix = confusion_matrix(targets, preds)
+        class_acc = matrix.diagonal()/matrix.sum(axis=1)
+        accs[epoch]    = accuracy_score(targets,preds)
+        prec   = precision_score(targets,preds,average=None)
+        prec_avg = precision_score(targets,preds,average='weighted')
+        rec    = recall_score(targets,preds,average=None)
+        rec_avg = recall_score(targets,preds,average='weighted')
+        f1     = f1_score(targets,preds,average=None)
+        f1_avg = f1_score(targets,preds,average='weighted')
 
         train_instance_acc = np.mean(mean_correct)
         #log_string('Train Instance Accuracy: %f' % train_instance_acc)

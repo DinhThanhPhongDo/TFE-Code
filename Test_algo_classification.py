@@ -1,4 +1,6 @@
 from models.change_detection import model
+from texttable import Texttable
+import latextable
 from time import time
 from tqdm import tqdm
 import numpy as np
@@ -38,18 +40,37 @@ def test_classification():
 
 
     matrix = confusion_matrix(targets, preds)
+    class_acc = matrix.diagonal()/matrix.sum(axis=1)
     acc    = accuracy_score(targets,preds)
     prec   = precision_score(targets,preds,average=None)
+    prec_avg = precision_score(targets,preds,average='weighted')
     rec    = recall_score(targets,preds,average=None)
+    rec_avg = recall_score(targets,preds,average='weighted')
     f1     = f1_score(targets,preds,average=None)
-    class_acc = matrix.diagonal()/matrix.sum(axis=1)
+    f1_avg = f1_score(targets,preds,average='weighted')
+    matrix = confusion_matrix(targets, preds,normalize='true')
 
-    print('avg acc %f     avg prec %f    avg recall %f    avg f1 %f'%(acc, precision_score(targets,preds,average='weighted'),recall_score(targets,preds,average='weighted'),f1_score(targets,preds,average='weighted')))
-    print('accuracy',class_acc)
-    print('precision:', prec)
-    print('recall',rec)
-    print('f1-score:',f1)
     print(matrix)
+    table = Texttable()
+    table.set_cols_align(["l", "c", "c", "c", "c"])
+    print("%.3f"%class_acc[1])
+    table.add_rows([["Evaluation Metric", "No transformation", "Translation","Rotation", "Average"],
+                    ["Accuracy", "%.3f"%class_acc[0], "%.3f"%class_acc[1], "%.3f"%class_acc[2], "%.3f"%acc],
+                    ["Precision",     "%.3f"%prec[0],      "%.3f"%prec[1],      "%.3f"%prec[2], "%.3f"%prec_avg],
+                    ["Recall",         "%.3f"%rec[0],       "%.3f"%rec[1],       "%.3f"%rec[2], "%.3f"%rec_avg],
+                    ["f1-Score",        "%.3f"%f1[0],        "%.3f"%f1[1],        "%.3f"%f1[2], "%.3f"%f1_avg]])
+    print(table.draw())
+    print(latextable.draw_latex(table, caption="Classification Result", label="tab:cls_res"))
 
+    table1 =Texttable()
+    table1.set_cols_align(["l", "c", "c","c"])
+    table1.add_rows([["","No transformation","Translation","Rotation"],
+                    ["Predicted No transformation", "%.3f"%matrix[0,0], "%.3f"%matrix[0,1], "%.3f"%matrix[0,2]],
+                    ["Predicted Translation"      , "%.3f"%matrix[1,0], "%.3f"%matrix[1,1], "%.3f"%matrix[1,2]],
+                    ["Predicted Rotation"         , "%.3f"%matrix[2,0], "%.3f"%matrix[2,1], "%.3f"%matrix[2,2]]])
+    print(table1.draw())
+    print(latextable.draw_latex(table1, caption="Classification Result", label="tab:cls_res"))
+1
 if __name__ == '__main__':
     test_classification()
+    # print( '%.2f'%1)

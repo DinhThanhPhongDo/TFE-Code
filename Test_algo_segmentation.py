@@ -3,7 +3,8 @@ from time import time
 from tqdm import tqdm
 import numpy as np
 import os
-from sklearn.metrics import accuracy_score, precision_score, recall_score,f1_score, confusion_matrix
+from texttable import Texttable
+import latextable
 
 def test_classification():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +17,6 @@ def test_classification():
 
     seg_label_to_cat = {0:'no transform',1:'translation',2:'rotation'}
     NUM_CLASSES = 3
-    num_batches = len(dir)
     total_correct = 0
     total_seen = 0
     labelweights = np.zeros(3)
@@ -59,10 +59,14 @@ def test_classification():
     IoU  = np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float64) + 1e-6)
     mIoU = np.mean(IoU)
 
+    class_acc = np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float64) + 1e-6)
+    acc = np.mean(class_acc)
+
     print('eval point avg class IoU: %f' % (mIoU))
     print('eval point accuracy: %f' % (total_correct / float(total_seen)))
     print('eval point avg class acc: %f' % (
         np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float64) + 1e-6))))
+    
     
     iou_per_class_str = '------- IoU --------\n'
     for l in range(NUM_CLASSES):
@@ -72,6 +76,15 @@ def test_classification():
 
     print(iou_per_class_str)
     print('Eval accuracy: %f' % (total_correct / float(total_seen)))
+
+    table =Texttable()
+    table.set_cols_align(["l", "c", "c","c","c"])
+    table.add_rows([["","No transformation","Translation","Rotation","Average"],
+                    ["Weights", "%.3f"%labelweights[0], "%.3f"%labelweights[1], "%.3f"%labelweights[2], ""],
+                    ["Class accuracy"      , "%.3f"%class_acc[0], "%.3f"%class_acc[1], "%.3f"%class_acc[2], "%.3f"%acc],
+                    ["Class IoU"         , "%.3f"%IoU[0], "%.3f"%IoU[1], "%.3f"%IoU[2],"%.3f"%mIoU]])
+    print(table.draw())
+    print(latextable.draw_latex(table, caption="Segmentation Result", label="tab:seg_res"))
 
 if __name__ == '__main__':
     test_classification()

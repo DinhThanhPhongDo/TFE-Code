@@ -94,11 +94,11 @@ if __name__ == '__main__':
     #      name = 'Plane'+str(i)
     #      single_plane(L,l,nTransform=16,planeName=name,partition='test',add_noise=True)
     
-    n_rooms = 4
+    n_rooms = 3
     for i in range(n_rooms):
         L = np.random.uniform(4,10)
         l = np.random.uniform(2,6)
         h1 = np.random.uniform(2,5)
         h2=None
         name = 'room'+str(i)
-        room(L,l,h1,h2,nTransform=6,planeName=name,partition='test',add_noise=False)
+        room(L,l,h1,h2,nTransform=4,planeName=name,partition='train',add_noise=False)
