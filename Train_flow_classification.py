@@ -8,6 +8,7 @@ import models.provider as provider
 import sys
 
 from dataloaders.PlaneDataLoader import PlaneDataLoader
+from sklearn.metrics import accuracy_score, precision_score, recall_score,f1_score, confusion_matrix
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
@@ -35,12 +36,46 @@ def test(model, loader, num_class=40):
         mean_correct.append(correct.item() / float(points.size()[0]))
 
     class_acc[:, 2] = class_acc[:, 0] / class_acc[:, 1]
-    class_acc = np.mean(class_acc[:, 2])
+    class_acc    = np.mean(class_acc[:, 2])
     instance_acc = np.mean(mean_correct)
 
     return instance_acc, class_acc
+def test2(model, loader, num_class=3):
+
+    classifier = model.eval()
+    targets = []
+    preds   = []
+
+    for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
+        points, target = points.cuda(), target.cuda()
+        points = points.transpose(2, 1)
+
+        pred, _ = classifier(points)
+
+        targets.extend(target.cpu().numpy())
+        preds.extend(pred.data.max(1)[1].cpu().numpy())
+    
+    print(targets)
+    print(preds)
+    
+    matrix = confusion_matrix(targets, preds)
+    acc    = accuracy_score(targets,preds)
+    prec   = precision_score(targets,preds,average=None)
+    rec    = recall_score(targets,preds,average=None)
+    f1     = f1_score(targets,preds,average=None)
+    class_acc = matrix.diagonal()/matrix.sum(axis=1)
+
+    print('avg acc %f     avg prec %f    avg recall %f    avg f1 %f'%(acc, precision_score(targets,preds,average='weighted'),recall_score(targets,preds,average='weighted'),f1_score(targets,preds,average='weighted')))
+    print('accuracy',class_acc)
+    print('precision:', prec)
+    print('recall',rec)
+    print('f1-score:',f1)
+    print(matrix)
 
 def main() : 
+    import os
+    os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
     train_dataset = PlaneDataLoader(root=DATA_DIR+"train")
     test_dataset  = PlaneDataLoader(root=DATA_DIR+"test")
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=1, drop_last=True)
@@ -89,7 +124,8 @@ def main() :
         print('could not load pretrained model... start from scratch')
     print('Start training...')
     start_epoch = 0
-    for epoch in range(start_epoch, 20):
+
+    for epoch in range(start_epoch, 2):
         #log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 200))
         print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
         mean_correct = []
@@ -100,9 +136,9 @@ def main() :
             optimizer.zero_grad()
 
             points = points.data.numpy()
-            points = provider.random_point_dropout(points)
-            # points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3])
-            # points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
+            points = provider.random_point_dropout(points,max_dropout_ratio=0.5)
+            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
+            points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_6(points[:,:,0:9])
             points = torch.Tensor(points)
             points = points.transpose(2, 1)
 
@@ -124,6 +160,7 @@ def main() :
 
         with torch.no_grad():
             instance_acc, class_acc = test(classifier.eval(), testDataLoader, num_class=num_class)
+            test2(classifier.eval(), testDataLoader, num_class=num_class)
 
             if (instance_acc >= best_instance_acc):
                 best_instance_acc = instance_acc

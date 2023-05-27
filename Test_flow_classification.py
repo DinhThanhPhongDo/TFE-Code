@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score,f1_sco
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
-DATA_DIR = os.path.join(ROOT_DIR,'data/cls/')
+DATA_DIR = os.path.join(ROOT_DIR,'data/cls_noisy/')
 
 def test(model, loader, num_class=3):
     mean_correct = []

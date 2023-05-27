@@ -124,6 +124,26 @@ def rotate_point_cloud_with_normal_9(batch_xyz_normal):
         batch_xyz_normal[k,:,6:9] = np.dot(shape_pc2.reshape((-1, 3)), rotation_matrix)
         batch_xyz_normal[k,:,3:6] = np.dot(shape_normal.reshape((-1, 3)), rotation_matrix)
     return batch_xyz_normal
+
+def rotate_point_cloud_with_normal_6(batch_xyz_normal):
+    ''' Randomly rotate XYZ, normal point cloud.
+        Input:
+            batch_xyz_normal: B,N,6, first three channels are XYZ, then flow, then xyz normalized
+        Output:
+            B,N,9, rotated XYZ, normal point cloud
+    '''
+    for k in range(batch_xyz_normal.shape[0]):
+        rotation_angle = np.random.uniform() * 2 * np.pi
+        cosval = np.cos(rotation_angle)
+        sinval = np.sin(rotation_angle)
+        rotation_matrix = np.array([[cosval, 0, sinval],
+                                    [0, 1, 0],
+                                    [-sinval, 0, cosval]])
+        shape_pc1 = batch_xyz_normal[k,:,0:3]
+        shape_normal = batch_xyz_normal[k,:,3:6]
+        batch_xyz_normal[k,:,0:3] = np.dot(shape_pc1.reshape((-1, 3)), rotation_matrix)
+        batch_xyz_normal[k,:,3:6] = np.dot(shape_normal.reshape((-1, 3)), rotation_matrix)
+    return batch_xyz_normal
 def rotate_perturbation_point_cloud_with_normal(batch_data, angle_sigma=0.06, angle_clip=0.18):
     """ Randomly perturb the point clouds by small rotations
         Input:
