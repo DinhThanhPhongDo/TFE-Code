@@ -61,7 +61,7 @@ def main(data_dir,filename,n_epoch = 10) :
             torch.nn.init.constant_(m.bias.data, 0.0)
 
     best_iou = 0
-    if True:
+    if False:
         checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/acc88.pth'))
         start_epoch = checkpoint['epoch']
         start_epoch = 0
@@ -102,7 +102,7 @@ def main(data_dir,filename,n_epoch = 10) :
     test_Acc = np.zeros((n_epoch,4))
     '''TRANING'''
     for epoch in range(start_epoch, n_epoch):
-        print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
+        print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, n_epoch))
         lr = max(0.001 * (1e-4 ** (epoch // 10)), LEARNING_RATE_CLIP)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
@@ -286,5 +286,6 @@ if __name__ == '__main__':
                 os.path.join(DATA_DIR,'seg_flow_noisy/')]
     for i in range(len(data_dirs)):
         print('\n \n***  training model:%s ***'%name[i])
-        main(data_dirs[i],name[i],2)
+        main(data_dirs[i],name[i],50)
+        
 
