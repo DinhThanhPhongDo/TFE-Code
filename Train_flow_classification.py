@@ -6,13 +6,15 @@ import importlib
 from tqdm import tqdm
 import models.provider as provider
 import sys
+import pickle 
+import matplotlib.pyplot as plt
 
 from dataloaders.PlaneDataLoader import PlaneDataLoader
 from sklearn.metrics import accuracy_score, precision_score, recall_score,f1_score, confusion_matrix
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
-DATA_DIR = os.path.join(ROOT_DIR,'data/cls/')
+DATA_DIR = os.path.join(ROOT_DIR,'data/')
 
 def test(model, loader):
 
@@ -29,31 +31,25 @@ def test(model, loader):
         targets.extend(target.cpu().numpy())
         preds.extend(pred.data.max(1)[1].cpu().numpy())
     
-    print(targets)
-    print(preds)
-    
-    matrix = confusion_matrix(targets, preds)
-    acc    = accuracy_score(targets,preds)
-    prec   = precision_score(targets,preds,average=None)
-    rec    = recall_score(targets,preds,average=None)
-    f1     = f1_score(targets,preds,average=None)
-    class_acc = matrix.diagonal()/matrix.sum(axis=1)
+    matrix      = confusion_matrix(targets, preds)
+    class_acc   = matrix.diagonal()/matrix.sum(axis=1)
+    acc         = accuracy_score(targets,preds)
+    prec        = precision_score(targets,preds,average=None)
+    prec_avg    = precision_score(targets,preds,average='weighted')
+    rec         = recall_score(targets,preds,average=None)
+    rec_avg     = recall_score(targets,preds,average='weighted')
+    f1          = f1_score(targets,preds,average=None)
+    f1_avg      = f1_score(targets,preds,average='weighted')
+    matrix      = confusion_matrix(targets, preds,normalize='true')
 
-    print('avg acc %f     avg prec %f    avg recall %f    avg f1 %f'%(acc, precision_score(targets,preds,average='weighted'),recall_score(targets,preds,average='weighted'),f1_score(targets,preds,average='weighted')))
-    print('accuracy',class_acc)
-    print('precision:', prec)
-    print('recall',rec)
-    print('f1-score:',f1)
-    print(matrix)
+    return class_acc,acc,prec,prec_avg,rec,rec_avg,f1,f1_avg
 
-    return acc,np.mean(class_acc) # instance_acc, class_acc
-
-def main() : 
+def main(data_dir,filename,n_epoch = 10) : 
     import os
     os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-    train_dataset = PlaneDataLoader(root=DATA_DIR+"train")
-    test_dataset  = PlaneDataLoader(root=DATA_DIR+"test")
+    train_dataset = PlaneDataLoader(root=data_dir+"train")
+    test_dataset  = PlaneDataLoader(root=data_dir+"test")
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=1, drop_last=True)
     testDataLoader  = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=1)
 
@@ -90,46 +86,58 @@ def main() :
     best_instance_acc = 0.0
     best_class_acc = 0.0
 
-    '''TRANING'''
-    print('try loading pretrained model...')
-    try:
-        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_cls/best_cls_no_noise.pth'))
-        classifier.load_state_dict(checkpoint['model_state_dict'])
-        print('pretrained model loaded!')
-    except Exception:
-        print('could not load pretrained model... start from scratch')
+    # print('try loading pretrained model...')
+    # try:
+    #     checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_cls/best_cls_no_noise.pth'))
+    #     classifier.load_state_dict(checkpoint['model_state_dict'])
+    #     print('pretrained model loaded!')
+    # except Exception:
+    #     print('could not load pretrained model... start from scratch')
     
     print('Start training...')
     start_epoch = 0
-    n_epoch = 10
+    
 
-    class_acc = np.zeros((n_epoch,))
-    accs    = np.zeros((n_epoch,3))
-    precs   = np.zeros((n_epoch,3))
-    prec_avgs = np.zeros((n_epoch,))
-    recs    =  np.zeros((n_epoch,3))
-    rec_avgs = np.zeros((n_epoch,))
-    f1s     = np.zeros((n_epoch,3))
-    f1_avgs = np.zeros((n_epoch,))
+    # evaluation metrics for train set
+    train_class_accs = np.zeros((n_epoch,3))
+    train_accs       = np.zeros((n_epoch))
+    train_precs      = np.zeros((n_epoch,3))
+    train_prec_avgs  = np.zeros((n_epoch,))
+    train_recs       = np.zeros((n_epoch,3))
+    train_rec_avgs   = np.zeros((n_epoch,))
+    train_f1s        = np.zeros((n_epoch,3))
+    train_f1_avgs    = np.zeros((n_epoch,))
 
+    # evaluation metrics for test set
+    eval_class_accs = np.zeros((n_epoch,3))
+    eval_accs       = np.zeros((n_epoch,))
+    eval_precs      = np.zeros((n_epoch,3))
+    eval_prec_avgs  = np.zeros((n_epoch,))
+    eval_recs       = np.zeros((n_epoch,3))
+    eval_rec_avgs   = np.zeros((n_epoch,))
+    eval_f1s        = np.zeros((n_epoch,3))
+    eval_f1_avgs    = np.zeros((n_epoch,))
+    
     for epoch in range(start_epoch, n_epoch):
 
-        print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
+        print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, n_epoch))
         mean_correct = []
-        targets = []
-        preds   = []
-        classifier = classifier.train()
+        targets      = []
+        preds        = []
 
+        '''TRAINING'''
+        classifier = classifier.train()
         scheduler.step()
         for batch_id, (points, target) in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
 
-            points = points.data.numpy()
-            points = provider.random_point_dropout(points,max_dropout_ratio=0.5)
-            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
-            points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_6(points[:,:,0:9])
-            points = torch.Tensor(points)
-            points = points.transpose(2, 1)
+            # Data Augmentation
+            points              = points.data.numpy()
+            points              = provider.random_point_dropout(points,max_dropout_ratio=0.5)
+            points[:, :, 0:3]   = provider.shift_point_cloud(points[:, :, 0:3])
+            points[:, :, 0:9]   = provider.rotate_point_cloud_with_normal_6(points[:,:,0:9])
+            points              = torch.Tensor(points)
+            points              = points.transpose(2, 1)
 
             points, target = points.cuda(), target.cuda()
 
@@ -144,37 +152,48 @@ def main() :
             loss.backward()
             optimizer.step()
             global_step += 1
-        
-        matrix = confusion_matrix(targets, preds)
-        class_acc = matrix.diagonal()/matrix.sum(axis=1)
-        accs[epoch]    = accuracy_score(targets,preds)
-        prec   = precision_score(targets,preds,average=None)
-        prec_avg = precision_score(targets,preds,average='weighted')
-        rec    = recall_score(targets,preds,average=None)
-        rec_avg = recall_score(targets,preds,average='weighted')
-        f1     = f1_score(targets,preds,average=None)
-        f1_avg = f1_score(targets,preds,average='weighted')
+        # evaluation of training 1 epoch
+        matrix                      = confusion_matrix(targets, preds)
+        train_class_accs[epoch,:]   = matrix.diagonal()/matrix.sum(axis=1)
+        train_accs[epoch]           = accuracy_score(targets,preds)
+        train_precs[epoch,:]        = precision_score(targets,preds,average=None)
+        train_prec_avgs[epoch]      = precision_score(targets,preds,average='weighted')
+        train_recs[epoch,:]         = recall_score(targets,preds,average=None)
+        train_rec_avgs[epoch]       = recall_score(targets,preds,average='weighted')
+        train_f1s[epoch,:]          = f1_score(targets,preds,average=None)
+        train_f1_avgs[epoch]        = f1_score(targets,preds,average='weighted')
+        train_instance_acc          = np.mean(mean_correct)
 
-        train_instance_acc = np.mean(mean_correct)
-        #log_string('Train Instance Accuracy: %f' % train_instance_acc)
         print('Train Instance Accuracy: %f' % train_instance_acc)
 
+        '''TESTING'''
         with torch.no_grad():
-            instance_acc, class_acc = test(classifier.eval(), testDataLoader)
+            class_acc,instance_acc,prec,prec_avg,rec,rec_avg,f1,f1_avg = test(classifier.eval(), testDataLoader)
 
+            # evaluation on the whole testing set
+            eval_class_accs[epoch,:] = class_acc
+            eval_accs[epoch]       = instance_acc
+            eval_precs[epoch,:]    = prec
+            eval_prec_avgs[epoch]  = prec_avg
+            eval_recs[epoch,:]     = rec
+            eval_rec_avgs[epoch] = rec_avg
+            eval_f1s[epoch,:]      = f1
+            eval_f1_avgs[epoch]    = f1_avg
+
+            class_acc = np.mean(class_acc)
             if (instance_acc >= best_instance_acc):
                 best_instance_acc = instance_acc
                 best_epoch = epoch + 1
 
             if (class_acc >= best_class_acc):
                 best_class_acc = class_acc
-            #log_string('Test Instance Accuracy: %f, Class Accuracy: %f' % (instance_acc, class_acc))
-            #log_string('Best Instance Accuracy: %f, Class Accuracy: %f' % (best_instance_acc, best_class_acc))
+
             print('Test Instance Accuracy: %f, Class Accuracy: %f' % (instance_acc, class_acc))
             print('Best Instance Accuracy: %f, Class Accuracy: %f' % (best_instance_acc, best_class_acc))
             if (instance_acc >= best_instance_acc):
+                print('save model...')
                 #logger.info('Save model...')
-                savepath = str("pretrained_model/pointnet_cls") + '/current_model.pth'
+                savepath = str("pretrained_model/pointnet_cls/") + filename+'.pth'
                 #log_string('Saving at %s' % savepath)
                 state = {
                     'epoch': best_epoch,
@@ -187,8 +206,57 @@ def main() :
                 torch.save(state, savepath)
             global_epoch += 1
 
-    #logger.info('End of training...')
+    # saving evaluation metrics
+    result_dict = {
+        "train class accuracy"      : train_class_accs,
+        "train average accuracy"    : train_accs,
+        "train class precision"     : train_precs,
+        "train average precision"   : train_prec_avgs,
+        "train class recall"        : train_recs,
+        "train average recall"      : train_rec_avgs,
+        "train class f1-score"      : train_f1s,
+        "train average f1-score"    : train_f1_avgs,
+
+        "test class accuracy"       : eval_class_accs,
+        "test average accuracy"     : eval_accs,
+        "test class precision"      : eval_precs,
+        "test average precision"    : eval_prec_avgs,
+        "test class recall"         : eval_recs,
+        "test average recall"       : eval_rec_avgs,
+        "test class f1-score"       : eval_f1s,
+        "test average f1-score"     : eval_f1_avgs,
+
+    }
+    with open(os.path.join(ROOT_DIR,'logs/'+filename+'.pkl'), 'wb') as f:
+        pickle.dump(result_dict, f)
+    return 
+
 
 if __name__ == '__main__':
-    freeze_support()
-    main()
+    # freeze_support()
+
+    name = ['cls_nonoise','cls_noise','cls_flow_nonoise','cls_flow_noise']
+    data_dirs = [os.path.join(DATA_DIR,'cls/'),
+                os.path.join(DATA_DIR,'cls_noisy/'),
+                os.path.join(DATA_DIR,'cls_flow/'),
+                os.path.join(DATA_DIR,'cls_flow_noisy/')]
+    for i in range(len(data_dirs)):
+        print('\n \n***  training model:%s ***'%name[i])
+        main(data_dirs[i],name[i],2)
+
+    # with open('cls_noise.pkl', 'rb') as f:
+    #     result = pickle.load(f)
+    
+    # y1 = result["train class accuracy"]
+    # y2 = result["train average accuracy"]
+    # x = np.arange(1,len(y1)+1,1)
+    # plt.plot(x,y1[:,0],label='no')
+    # plt.plot(x,y1[:,1],label='translation')
+    # plt.plot(x,y1[:,2],label='rotation')
+    # plt.plot(x,y2,label='average')
+    # plt.legend()
+    # plt.title('Acc')
+    # plt.xlabel('epoch')
+    # plt.ylabel('Acc')
+    # plt.grid()
+    # plt.show()

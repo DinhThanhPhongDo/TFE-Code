@@ -32,14 +32,14 @@ class SegDataLoader(Dataset):
         labelweights = labelweights.astype(np.float32)
         labelweights = labelweights / np.sum(labelweights)
         self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 1.0)
-        print(self.labelweights)
+        # print(self.labelweights)
         sample_prob = num_point_all / np.sum(num_point_all)
         num_iter = int(np.sum(num_point_all) * sample_rate / num_point)
         room_idxs = []
         for index in range(len(self.datapath)):
             room_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
         self.room_idxs = np.array(room_idxs)
-        print("Totally {} samples.".format(len(self.room_idxs)))
+        # print("Totally {} samples.".format(len(self.room_idxs)))
 
     def __getitem__(self, idx):
         room_idx = self.room_idxs[idx]
@@ -158,10 +158,10 @@ class ScannetDatasetWholeScene():
                     label_room = np.hstack([label_room, label_batch]) if label_room.size else label_batch
                     sample_weight = np.hstack([sample_weight, batch_weight]) if label_room.size else batch_weight
                     index_room = np.hstack([index_room, point_idxs]) if index_room.size else point_idxs
-        data_room = data_room.reshape((-1, self.block_points, data_room.shape[1]))
-        label_room = label_room.reshape((-1, self.block_points))
+        data_room     = data_room.reshape((-1, self.block_points, data_room.shape[1]))
+        label_room    = label_room.reshape((-1, self.block_points))
         sample_weight = sample_weight.reshape((-1, self.block_points))
-        index_room = index_room.reshape((-1, self.block_points))
+        index_room    = index_room.reshape((-1, self.block_points))
         return data_room, label_room, sample_weight, index_room
 
     def __len__(self):

@@ -1,1 +1,9 @@
-data/
+data/buildwise/
+data/cls/
+data/cls_flow/
+data/cls_noisy/
+data/cls_flow_noisy/
+data/seg/
+data/seg_flow/
+data/seg_noisy/
+data/seg_flow_noisy/

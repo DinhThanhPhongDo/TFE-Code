@@ -1,8 +1,10 @@
 import numpy as np
 import torch
 import os
+import pickle
 import importlib
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 import models.provider as provider
 import sys
 import time
@@ -10,8 +12,8 @@ import time
 from dataloaders.SegDataLoader import SegDataLoader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = BASE_DIR# os.path.abspath(os.path.join(BASE_DIR, os.pardir))
-DATA_DIR = os.path.join(ROOT_DIR,'data/seg/')
+ROOT_DIR = BASE_DIR
+DATA_DIR = os.path.join(ROOT_DIR,'data/')
 
 classes = ['base', 'translation', 'rotation']
 class2label = {cls: i for i, cls in enumerate(classes)}
@@ -20,15 +22,15 @@ seg_label_to_cat = {}
 for i, cat in enumerate(seg_classes.keys()):
     seg_label_to_cat[i] = cat
 
-def main() : 
+def main(data_dir,filename,n_epoch = 10) : 
     import os
     os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
     NUM_CLASSES = 3
     NUM_POINT = 4096
     BATCH_SIZE = 8
-    train_dataset = SegDataLoader(data_root=DATA_DIR+"train",num_point = NUM_POINT, block_size=6)
-    test_dataset = SegDataLoader(data_root=DATA_DIR+"test",num_point = NUM_POINT, block_size=6)
+    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=6)
+    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=6)
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
@@ -94,9 +96,12 @@ def main() :
 
     global_epoch = 0
     
-
+    train_IoU = np.zeros((n_epoch,4))
+    train_Acc = np.zeros((n_epoch,4))
+    test_IoU = np.zeros((n_epoch,4))
+    test_Acc = np.zeros((n_epoch,4))
     '''TRANING'''
-    for epoch in range(start_epoch, 20):
+    for epoch in range(start_epoch, n_epoch):
         print('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, 20))
         lr = max(0.001 * (1e-4 ** (epoch // 10)), LEARNING_RATE_CLIP)
         for param_group in optimizer.param_groups:
@@ -110,15 +115,20 @@ def main() :
         total_correct = 0
         total_seen = 0
         loss_sum = 0
+
+        total_seen_class     = [0 for _ in range(NUM_CLASSES)]
+        total_correct_class  = [0 for _ in range(NUM_CLASSES)]
+        total_iou_deno_class = [0 for _ in range(NUM_CLASSES)]
         classifier = classifier.train()
 
         for batch_id, (points, target) in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
             points = points.data.numpy()
-            # points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
-            # points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3])
+
             points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
             points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,0:9])
+            points[:, :, 0:9] = provider.shuffle_points(points[:,:,0:9])
+
             points = torch.Tensor(points)
             points, target = points.float().cuda(), target.long().cuda()
             points = points.transpose(2, 1)
@@ -137,12 +147,22 @@ def main() :
             total_correct += correct
             total_seen += (BATCH_SIZE * NUM_POINT)
             loss_sum += loss
+            for l in range(NUM_CLASSES):
+                total_seen_class[l] += np.sum((batch_label == l))
+                total_correct_class[l]  += np.sum((pred_choice == l) & (batch_label == l))
+                total_iou_deno_class[l] += np.sum(((pred_choice == l) | (batch_label == l)))
+        
+        for l in range(NUM_CLASSES):
+            
+            train_IoU[epoch,l] = total_correct_class[l] / (total_iou_deno_class[l]+ 1e-6)
+            train_Acc[epoch,l] = total_correct_class[l] / (total_seen_class[l]+1e-6)
+
         print('Training mean loss: %f' % (loss_sum / num_batches))
         print('Training accuracy: %f' % (total_correct / float(total_seen)))
 
         if epoch % 5 == 0:
             print('Save model...')
-            savepath = str("pretrained_model/pointnet_seg/") + 'backup_model.pth'
+            savepath = str("pretrained_model/pointnet_seg/") + 'current_model.pth'
             #log_string('Saving at %s' % savepath)
             state = {
                 'epoch': epoch,
@@ -167,8 +187,9 @@ def main() :
             print('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
             for i, (points, target) in tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
                 points = points.data.numpy()
-                # points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
+                points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
                 points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,:])
+                points[:, :, 0:9] = provider.shuffle_points(points[:,:,0:9])
                 points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)
@@ -194,15 +215,20 @@ def main() :
                     total_seen_class[l] += np.sum((batch_label == l))
                     total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
-            print(labelweights)
-            print(predlabelweights)
+            # print(labelweights)
+            # print(predlabelweights)
+            for l in range(NUM_CLASSES):
+                
+                test_IoU[epoch,l] = total_correct_class[l] / (total_iou_deno_class[l]+ 1e-6)
+                test_Acc[epoch,l] = total_correct_class[l] / (total_seen_class[l]+1e-6)
+
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
-            mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float) + 1e-6))
+            mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float64) + 1e-6))
             print('eval mean loss: %f' % (loss_sum / float(num_batches)))
             print('eval point avg class IoU: %f' % (mIoU))
             print('eval point accuracy: %f' % (total_correct / float(total_seen)))
             print('eval point avg class acc: %f' % (
-                np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
+                np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float64) + 1e-6))))
 
             iou_per_class_str = '------- IoU --------\n'
             for l in range(NUM_CLASSES):
@@ -217,7 +243,7 @@ def main() :
             if mIoU >= best_iou:
                 best_iou = mIoU
                 #logger.info('Save model...')
-                savepath = str("pretrained_model/pointnet_seg") + '/current_model.pth'
+                savepath = str("pretrained_model/pointnet_seg/") + filename+'.pth'
                 #log_string('Saving at %s' % savepath)
                 state = {
                     'epoch': epoch,
@@ -230,7 +256,35 @@ def main() :
             print('Best mIoU: %f' % best_iou)
         global_epoch += 1
     #logger.info('End of training...')
+    train_IoU[:,3] = np.mean(train_IoU[:,:3],axis=1)
+    train_Acc[:,3] = np.mean(train_Acc[:,:3],axis=1)
+    test_IoU[:,3] = np.mean(test_IoU[:,:3],axis=1)
+    test_Acc[:,3] = np.mean(test_Acc[:,:3],axis=1)
+    result_dict = {
+        "train Acc"      : train_Acc,
+        "train IoU"      : train_IoU,
+
+        "test Acc"       : test_Acc,
+        "test IoU"       : test_IoU,
+
+    }
+    with open(os.path.join(ROOT_DIR,'logs/'+filename+'.pkl'), 'wb') as f:
+        pickle.dump(result_dict, f)
+    return 
+
+
+
+
 
 if __name__ == '__main__':
-    #freeze_support()
-    main()
+    # freeze_support()
+
+    name = ['seg_nonoise','seg_noise','seg_flow_nonoise','seg_flow_noise']
+    data_dirs = [os.path.join(DATA_DIR,'seg/'),
+                os.path.join(DATA_DIR,'seg_noisy/'),
+                os.path.join(DATA_DIR,'seg_flow/'),
+                os.path.join(DATA_DIR,'seg_flow_noisy/')]
+    for i in range(len(data_dirs)):
+        print('\n \n***  training model:%s ***'%name[i])
+        main(data_dirs[i],name[i],2)
+

@@ -14,14 +14,10 @@ TRAIN_DIR = os.path.join(DATA_DIR,'train')
 TEST_DIR  = os.path.join(DATA_DIR,'test')
 
 class Object3DDataset(Dataset):
-    def __init__(self,npoints=2048, partition='train'):
+    def __init__(self,root,npoints=2048,  mode='eval'):
         self.npoints = npoints
-        self.partition = partition
-
-        if self.partition=='train':
-            self.data_dir = TRAIN_DIR
-        else:
-            self.data_dir = TEST_DIR
+        self.mode    = mode
+        self.data_dir= root
         
         self.samples_npy = np.array(os.listdir(self.data_dir))
 
@@ -35,9 +31,9 @@ class Object3DDataset(Dataset):
         color2 = np.zeros((len(pos2),3),dtype=np.float32)
         flow  = sample[:,3:6].astype('float32')
         mask  = np.ones((len(pos2),1),dtype=np.float32)
-        labels = model[:,6].astype('float32')
+        labels = sample[:,6].astype('float32')
 
-        if self.partition == 'train':
+        if self.mode == 'train':
             n1 = pos1.shape[0]
             sample_idx1 = np.random.choice(n1, self.npoints, replace=False)
             n2 = pos2.shape[0]
@@ -51,13 +47,13 @@ class Object3DDataset(Dataset):
             mask = mask[sample_idx2, :]
             labels= labels[sample_idx2]
         else:
-            pos1 = pos1[:self.npoints, :]
-            pos2 = pos2[:self.npoints, :]
-            color1 = color1[:self.npoints, :]
-            color2 = color2[:self.npoints, :]
-            flow = flow[:self.npoints, :]
-            mask = mask[:self.npoints, :]
-            labels= labels[:self.npoints]
+            pos1 = pos1[:, :]
+            pos2 = pos2[:, :]
+            color1 = color1[:, :]
+            color2 = color2[:, :]
+            flow = flow[:, :]
+            mask = mask[:, :]
+            labels= labels[:]
 
         pos1_center = np.mean(pos1, 0)
         pos1 -= pos1_center
@@ -67,8 +63,6 @@ class Object3DDataset(Dataset):
 
     def __len__(self):
         return len(self.samples_npy)
-
-
 
 if __name__ == '__main__':
     train = Object3DDataset(partition='train')
