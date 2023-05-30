@@ -42,6 +42,17 @@ def shuffle_points(batch_data):
     idx = np.arange(batch_data.shape[1])
     np.random.shuffle(idx)
     return batch_data[:,idx,:]
+def shuffle_point_cloud(batch_data,label):
+    """ Shuffle orders of points in each point cloud -- changes FPS behavior.
+        Use the same shuffling idx for the entire batch.
+        Input:
+            BxNxC array
+        Output:
+            BxNxC array
+    """
+    idx = np.arange(batch_data.shape[1])
+    np.random.shuffle(idx)
+    return batch_data[:,idx,:],label[:,idx]
 
 def rotate_point_cloud(batch_data):
     """ Randomly rotate the point clouds to augument the dataset

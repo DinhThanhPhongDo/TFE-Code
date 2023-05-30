@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 import os
 import pickle
 import importlib
@@ -29,13 +30,12 @@ def main(data_dir,filename,n_epoch = 10) :
 
     NUM_CLASSES = 3
     NUM_POINT = 4096
-    BATCH_SIZE = 16
-    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=1)
-    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=1)
-    trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=12,
-                                                  pin_memory=True, drop_last=True,)
-                                                  #worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=12,
+    BATCH_SIZE = 8
+    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=3)
+    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=3)
+    trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8,
+                                                  pin_memory=True, drop_last=True)
+    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=8,
                                                  pin_memory=True, drop_last=True)
     weights = torch.Tensor(train_dataset.labelweights).cuda()
     sys.path.append(os.path.join(BASE_DIR, 'models'))
@@ -61,9 +61,15 @@ def main(data_dir,filename,n_epoch = 10) :
             torch.nn.init.xavier_normal_(m.weight.data)
             torch.nn.init.constant_(m.bias.data, 0.0)
 
+    if torch.cuda.device_count() > 1:
+        print()
+        classifier = nn.DataParallel(classifier)
+        criterion  = nn.DataParallel(criterion)
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+
     best_iou = 0
     if True:
-        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/acc88.pth'))
+        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/current_model.pth'))
         start_epoch = checkpoint['epoch']
         start_epoch = 0
         if 'class_avg_iou' in checkpoint.keys() :
@@ -128,22 +134,27 @@ def main(data_dir,filename,n_epoch = 10) :
         classifier = classifier.train()
 
         for batch_id, (points, target) in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
+            t0 = time.time()
             optimizer.zero_grad()
-            points = points.data.numpy()
 
+            points = points.data.numpy()
             points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
             points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,0:9])
             points[:, :, 0:9], target, _ = provider.shuffle_data(points[:,:,0:9],target)
 
             points = torch.Tensor(points)
+            
             points, target = points.float().cuda(), target.long().cuda()
             points = points.transpose(2, 1)
-
+            t1 = time.time()
             seg_pred, trans_feat = classifier(points)
+            t2 = time.time()
             seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
-
+            
             batch_label = target.view(-1, 1)[:, 0].cpu().data.numpy()
-            target = target.view(-1, 1)[:, 0]
+            
+            target      = target.view(-1, 1)[:, 0]
+            t3 = time.time()
             loss = criterion(seg_pred, target, trans_feat, weights)
             loss.backward()
             optimizer.step()
@@ -153,10 +164,15 @@ def main(data_dir,filename,n_epoch = 10) :
             total_correct += correct
             total_seen += (BATCH_SIZE * NUM_POINT)
             loss_sum += loss
+            
             for l in range(NUM_CLASSES):
                 total_seen_class[l] += np.sum((batch_label == l))
                 total_correct_class[l]  += np.sum((pred_choice == l) & (batch_label == l))
                 total_iou_deno_class[l] += np.sum(((pred_choice == l) | (batch_label == l)))
+            
+            # print('\n')
+            # print('\n',t1-t0,t2-t1,t3-t2)
+            # print(t3-t0)
         
         for l in range(NUM_CLASSES):
             
@@ -166,7 +182,7 @@ def main(data_dir,filename,n_epoch = 10) :
         print('Training mean loss: %f' % (loss_sum / num_batches))
         print('Training accuracy: %f' % (total_correct / float(total_seen)))
 
-        if epoch % 5 == 0:
+        if epoch % 1 == 0:
             print('Save model...')
             savepath = str("pretrained_model/pointnet_seg/") + 'current_model.pth'
             #log_string('Saving at %s' % savepath)
@@ -192,6 +208,7 @@ def main(data_dir,filename,n_epoch = 10) :
 
             print('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
             for i, (points, target) in tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
+                
                 points = points.data.numpy()
                 points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
                 points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,:])
@@ -203,6 +220,7 @@ def main(data_dir,filename,n_epoch = 10) :
                 seg_pred, trans_feat = classifier(points)
                 pred_val = seg_pred.contiguous().cpu().data.numpy()
                 seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
+                
 
                 batch_label = target.cpu().data.numpy()
                 target = target.view(-1, 1)[:, 0]
@@ -216,11 +234,13 @@ def main(data_dir,filename,n_epoch = 10) :
                 labelweights += tmp
                 tmp, _ = np.histogram(pred_val, range(NUM_CLASSES + 1))
                 predlabelweights += tmp
+                
 
                 for l in range(NUM_CLASSES):
                     total_seen_class[l] += np.sum((batch_label == l))
                     total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
+
             # print(labelweights)
             # print(predlabelweights)
             for l in range(NUM_CLASSES):

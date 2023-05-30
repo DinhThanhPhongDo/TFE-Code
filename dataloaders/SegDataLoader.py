@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 class SegDataLoader(Dataset):
     def __init__(self, data_root='trainval_fullarea', num_point=4096, block_size=1.0, sample_rate=1.0,):
         super().__init__()
-        self.num_point = num_point
+        self.num_point  = num_point
         self.block_size = block_size
         filenames     = [os.path.join(data_root, f) for f in os.listdir(data_root)]
         self.datapath = [f for f in filenames]

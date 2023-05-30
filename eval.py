@@ -11,7 +11,7 @@ DATA_DIR = os.path.join(ROOT_DIR,'data/cls_noisy/')
 
 
 def eval_seg(filename):
-        def seg_plot(x,y1,y_label,plotname,display=False):
+        def seg_plot(x,y1,y_label,plotname,display=True):
                 fig, ax = plt.subplots()
                 # Plot the lines with different colors and linestyles
                 ax.plot(x, y1[:,0],linewidth=1, color='black', linestyle='--',label='base')
@@ -114,7 +114,7 @@ def eval_cls(filename):
 if __name__ == '__main__':
         # eval_cls('cls_nonoise')
         eval_seg('seg_nonoise')
-        eval_seg('seg_noise')
+        # eval_seg('seg_noise')
         
-        eval_seg('seg_flow_nonoise')
-        eval_seg('seg_flow_noise')
+        # eval_seg('seg_flow_nonoise')
+        # eval_seg('seg_flow_noise')
