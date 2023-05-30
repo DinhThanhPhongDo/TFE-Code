@@ -43,22 +43,13 @@ class Object3D:
 
             transform_id = np.random.choice(np.arange(3))
 
-            if transform_id ==0:
-                xyz1 = object3d.get_xyz()
-                if self.is_noisy:
-                    xyz2 = object3d.add_noise()
-                xyz2 = object3d.get_xyz()
-
-
+            xyz1 = object3d.get_xyz()
+            
             if transform_id ==1:
                 t  = np.random.uniform(0.5,0.15,size=(3,)) #0.05 up to 0.15
                 t *= np.random.choice([-1,1])
-                xyz1 = object3d.get_xyz()
                 object3d.translate(t)
-                if self.is_noisy:
-                    xyz2 = object3d.add_noise()
-                xyz2 = object3d.get_xyz()
-
+            
             if transform_id ==2:
                 angle  = np.random.uniform(1,10) # 1 up to  10
                 angle *= np.random.choice([-1,1])
@@ -66,12 +57,11 @@ class Object3D:
                     axis  = np.random.choice([0,1,2])
                 else:
                     axis  = np.random.choice(self.allowed_rot[i])
-                xyz1 = object3d.get_xyz()
                 object3d.rotate(axis,angle)
-                if self.is_noisy:
-                    xyz2 = object3d.add_noise()
-                xyz2 = object3d.get_xyz()
                 
+            if self.is_noisy:
+                xyz2 = object3d.add_noise()
+            xyz2 = object3d.get_xyz()
 
             self.xyz[count: count+len(object3d.xyz), : ]  = xyz2
             self.label[count: count+len(object3d.xyz),0]  = np.ones(len(object3d.xyz))*transform_id

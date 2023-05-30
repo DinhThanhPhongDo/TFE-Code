@@ -4,10 +4,11 @@ import os
 import pickle
 import importlib
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import models.provider as provider
 import sys
 import time
+import torch.nn as nn
 
 from dataloaders.SegDataLoader import SegDataLoader
 
@@ -28,13 +29,13 @@ def main(data_dir,filename,n_epoch = 10) :
 
     NUM_CLASSES = 3
     NUM_POINT = 4096
-    BATCH_SIZE = 8
-    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=6)
-    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=6)
-    trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
-                                                  pin_memory=True, drop_last=True,
-                                                  worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=1,
+    BATCH_SIZE = 16
+    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=1)
+    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=1)
+    trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=12,
+                                                  pin_memory=True, drop_last=True,)
+                                                  #worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
+    testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=12,
                                                  pin_memory=True, drop_last=True)
     weights = torch.Tensor(train_dataset.labelweights).cuda()
     sys.path.append(os.path.join(BASE_DIR, 'models'))
@@ -61,7 +62,7 @@ def main(data_dir,filename,n_epoch = 10) :
             torch.nn.init.constant_(m.bias.data, 0.0)
 
     best_iou = 0
-    if False:
+    if True:
         checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/acc88.pth'))
         start_epoch = checkpoint['epoch']
         start_epoch = 0
@@ -84,6 +85,11 @@ def main(data_dir,filename,n_epoch = 10) :
             )
     else:
         optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, momentum=0.9)
+
+    if torch.cuda.device_count() > 1:
+        classifier = nn.DataParallel(classifier)
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    
 
     def bn_momentum_adjust(m, momentum):
         if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.BatchNorm1d):
@@ -127,7 +133,7 @@ def main(data_dir,filename,n_epoch = 10) :
 
             points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
             points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,0:9])
-            points[:, :, 0:9] = provider.shuffle_points(points[:,:,0:9])
+            points[:, :, 0:9], target, _ = provider.shuffle_data(points[:,:,0:9],target)
 
             points = torch.Tensor(points)
             points, target = points.float().cuda(), target.long().cuda()
@@ -189,7 +195,7 @@ def main(data_dir,filename,n_epoch = 10) :
                 points = points.data.numpy()
                 points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
                 points[:, :, 0:9] = provider.rotate_point_cloud_with_normal_9(points[:,:,:])
-                points[:, :, 0:9] = provider.shuffle_points(points[:,:,0:9])
+                points[:, :, 0:9], target, _ = provider.shuffle_data(points[:,:,0:9],target)
                 points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)
@@ -279,13 +285,16 @@ def main(data_dir,filename,n_epoch = 10) :
 if __name__ == '__main__':
     # freeze_support()
 
-    name = ['seg_nonoise','seg_noise','seg_flow_nonoise','seg_flow_noise']
-    data_dirs = [os.path.join(DATA_DIR,'seg/'),
+    name = [#'seg_nonoise',
+            'seg_noise',
+            #'seg_flow_nonoise',
+            'seg_flow_noise']
+    data_dirs = [#os.path.join(DATA_DIR,'seg/'),
                 os.path.join(DATA_DIR,'seg_noisy/'),
-                os.path.join(DATA_DIR,'seg_flow/'),
+                #os.path.join(DATA_DIR,'seg_flow/'),
                 os.path.join(DATA_DIR,'seg_flow_noisy/')]
     for i in range(len(data_dirs)):
         print('\n \n***  training model:%s ***'%name[i])
-        main(data_dirs[i],name[i],50)
+        main(data_dirs[i],name[i],30)
         
 
