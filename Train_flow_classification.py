@@ -241,8 +241,10 @@ if __name__ == '__main__':
                 os.path.join(DATA_DIR,'cls_flow/'),
                 os.path.join(DATA_DIR,'cls_flow_noisy/')]
     for i in range(len(data_dirs)):
+        if i == 0:
+            continue
         print('\n \n***  training model:%s ***'%name[i])
-        main(data_dirs[i],name[i],2)
+        main(data_dirs[i],name[i],50)
 
     # with open('cls_noise.pkl', 'rb') as f:
     #     result = pickle.load(f)
