@@ -91,7 +91,7 @@ class Object3D:
         self.flow = np.zeros(shape = self.flow.shape)
 
     def save(self,filename):
-        xyzfl = np.concatenate((self.xyz,self.flow,self.label),axis=1)
+        xyzfl = np.concatenate((self.xyz,self.flow,self.label),axis=1,dtype=np.float32)
         np.save(filename,xyzfl)
     
     def copy(self,allowed_rot=None,is_noisy=False):

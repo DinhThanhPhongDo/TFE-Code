@@ -135,20 +135,20 @@ if __name__ == '__main__':
                  os.path.join(DATA_DIR,'seg_noisy/train'),
                  os.path.join(DATA_DIR,'seg_noisy/test')]
     
-    n_pl = [64,16,64,16]
-    n_tr = [ 4, 4, 4, 4]
-    # n_pl = [4,1,4,1]
+    # n_pl = [64,16,64,16]
     # n_tr = [ 4, 4, 4, 4]
+    n_pl = [8,6,8,6]
+    n_tr = [ 6, 4, 6, 4]
     noise= [False,False,True,True]
 
     for i in range(len(plane_dirs)):
         print('dir=%s'%(plane_dirs[i]))
         generate_planes(plane_dirs[i],n_pl[i],n_tr[i],noise[i])
 
-    n_ro = [64,16,64,16]
-    n_tr = [ 4, 4, 4, 4]
-    # n_ro = [4,1,4,1]
+    # n_ro = [64,16,64,16]
     # n_tr = [ 4, 4, 4, 4]
+    n_ro = [8,6,8,6]
+    n_tr = [ 6, 4, 6, 4]
     noise= [False,False,True,True]
     for i in range(len(room_dirs)):
         print('dir=%s'%(room_dirs[i]))
