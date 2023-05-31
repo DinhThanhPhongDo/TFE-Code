@@ -30,8 +30,8 @@ def main(data_dir,filename,n_epoch = 10) :
     NUM_CLASSES = 3
     NUM_POINT = 4096
     BATCH_SIZE = 16
-    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=1)
-    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=1)
+    train_dataset = SegDataLoader(data_root=data_dir+"train",num_point = NUM_POINT, block_size=2)
+    test_dataset = SegDataLoader(data_root=data_dir+"test",num_point = NUM_POINT, block_size=2)
     trainDataLoader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=12,
                                                   pin_memory=True, drop_last=True,)
                                                   #worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
@@ -63,7 +63,7 @@ def main(data_dir,filename,n_epoch = 10) :
 
     best_iou = 0
     if True:
-        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/acc88.pth'))
+        checkpoint = torch.load(os.path.join(BASE_DIR, 'pretrained_model/pointnet_seg/seg_noise.pth'))
         start_epoch = checkpoint['epoch']
         start_epoch = 0
         if 'class_avg_iou' in checkpoint.keys() :
@@ -286,11 +286,11 @@ if __name__ == '__main__':
     # freeze_support()
 
     name = [#'seg_nonoise',
-            'seg_noise',
+            #'seg_noise',
             #'seg_flow_nonoise',
             'seg_flow_noise']
     data_dirs = [#os.path.join(DATA_DIR,'seg/'),
-                os.path.join(DATA_DIR,'seg_noisy/'),
+                #os.path.join(DATA_DIR,'seg_noisy/'),
                 #os.path.join(DATA_DIR,'seg_flow/'),
                 os.path.join(DATA_DIR,'seg_flow_noisy/')]
     for i in range(len(data_dirs)):
